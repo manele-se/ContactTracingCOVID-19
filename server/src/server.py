@@ -35,12 +35,17 @@ class Server:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((self.udp_ip, self.udp_port))
 
+        # Loop forever
         while True:
-            # Wait for one packet to arrive
+            # Wait for one UDP datagram to arrive
             data, addr = sock.recvfrom(UDP_PACKET_SIZE)
             self.handle_incoming_broadcast(sock, data, addr)
 
     def handle_incoming_broadcast(self, sock, data, sender_addr):
+        """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
+
+        print(f'"{sender_addr}" says "{data}')
+
         # Check if the sender's address is already known or not
         if sender_addr in self.devices_by_addr:
             sender = self.devices_by_addr[sender_addr]
