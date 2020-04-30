@@ -24,54 +24,78 @@
         const INITIAL_ZOOM = 19;
         const MAP_TYPE = 'satellite'
 
+        const circleStyle = {
+            strokeColor: '#112299',
+            strokeOpacity: 0.8,
+            strokeWeight: 2.0,
+            fillColor: '#5599ff',
+            fillOpacity: 0.2
+        };
+
         // Store all devices by their name
         const devices = { };
 
+        /**
+         * Returns a device marker. If the name is already known, returns an existing marker. Otherwise creates a new.
+         */
+        function getOrCreateDeviceMarker(name, map) {
+            if (name in devices) {
+                // This is a known device
+                return devices[name];
+            }
+            else {
+                // The name is on the format "device-N". Get the "N" part and use it as a label.
+                const label = name.split('-')[1];
+
+                // Create a new marker on the map
+                const newDevice = new google.maps.Marker({
+                    position: new google.maps.LatLng(CENTER_LAT, CENTER_LNG),
+                    title: name,
+                    label: label
+                });
+                newDevice.setMap(map);
+
+                // Add the device
+                devices[name] = newDevice;
+
+                return newDevice;
+            }
+        }
+
+        /**
+         * Create a circle on the map that grows to 10 meters in radius
+         */
+        function showBroadcastCircle(lat, lng, map) {
+            // Create a small circle
+            const circle = new google.maps.Circle({
+                center: new google.maps.LatLng(lat, lng),
+                map: map,
+                radius: 0.5,
+                ...circleStyle
+            });
+
+            // Let the circle grow over time
+            for (let r = 1; r <= 10; r += 0.5) {
+                window.setTimeout(() => {
+                    circle.setRadius(r);
+                }, r * 95);
+            }
+
+            // Remove the circle when it's done
+            window.setTimeout(() => circle.setMap(null), 1000);
+        }
+
+        /**
+         * Connect to the WebSocket endpoint and start communicating
+         */
         function connectToWebSocket(map) {
-            // Connect to the websocket endpoint
+            // Get the WecSocket URL
             const wsAddress = `ws://${document.location.host}/ws`;
             const ws = new WebSocket(wsAddress);
 
-            // Incoming message from the server
-            ws.onmessage = evt => {
-                // Parse the message
-                const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
-
-                // Check if the device is known
-                let device = devices[name];
-
-                if (!device) {
-                    // This is a new device:
-
-                    // The name is on the format "device-N". Get the "N" part and use it as a label.
-                    const label = name.split('-')[1];
-
-                    // Create a new marker on the map
-                    device = new google.maps.Marker({
-                        position: new google.maps.LatLng(lat, lng),
-                        title: name,
-                        label: label
-                    });
-                    device.setMap(map);
-
-                    // Add the device
-                    devices[name] = device;
-                }
-
-                switch (action) {
-                    case 'move':
-                        // Move the marker to the device's new position
-                        device.setPosition(new google.maps.LatLng(lat, lng));
-                        break;
-
-                    case 'broadcast':
-
-                        break;
-
-                    case 'receive':
-                        console.log(`Device "${name}" received a message`);
-                        break;
-                }
+            // Connection was established.
+            ws.onopen = evt => {
+                console.log('WebSocket connection established.');
             };
 
             // Connection was closed or broken. Retry connection after a second.
@@ -80,8 +104,29 @@
                 window.setTimeout(() => connectToWebSocket(map), 1000);
             };
 
-            ws.onopen = evt => {
-                console.log('WebSocket connection established.');
+            // Incoming message from the server
+            ws.onmessage = evt => {
+                // Parse the message
+                const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
+
+                // Check if the device is known
+                const device = getOrCreateDeviceMarker(name, map);
+
+                switch (action) {
+                    case 'move':
+                        // Move the marker to the device's new position
+                        device.setPosition(new google.maps.LatLng(lat, lng));
+                        break;
+
+                    case 'broadcast':
+                        // Show a circle on the map that grows over time from 1 meter radius to 10 meter radius
+                        showBroadcastCircle(lat, lng, map);
+                        break;
+
+                    case 'receive':
+                        console.log(`Device "${name}" received a message`);
+                        break;
+                }
             };
         }
 
