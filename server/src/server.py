@@ -71,8 +71,6 @@ class Server:
         # Get the Device instance for this address, or create a new one if this is a new address
         sender = self.get_of_create_device_from_addr(sender_addr)
 
-        print(f'"{sender.name}" says "{data}')
-
         # Send broadcast to WebSocket clients
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
@@ -90,7 +88,7 @@ class Server:
 
             if distance < threshold:
                 # If signal is strong enough, relay the packet to the receiver
-                print(f'Relaying to {receiver.name}')
+                print(f'Relaying from {sender.name} to {receiver.name}')
                 sock.sendto(data, receiver.addr)
 
                 # Send receive event to WebSocket clients
