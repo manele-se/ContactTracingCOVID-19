@@ -1,4 +1,10 @@
 
+# Python
 venv/
 __pycache__/
+
+# IntelliJ IDEA
 .idea/
+
+# Mac OS X
+.DS_Store

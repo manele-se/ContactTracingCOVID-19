@@ -10,6 +10,9 @@ import time
 UDP_SERVER_IP = '127.0.0.1'
 UDP_SERVER_PORT = 50000
 
+# Maximum number of bytes sent
+UDP_PACKET_SIZE = 1024
+
 class UdpClient:
     """UDP client for communicating with the simulation server"""
     def __init__(self):
@@ -26,7 +29,7 @@ class UdpClient:
         # Loop forever
         while True:
             # Wait for an incoming UDP datagram
-            data, addr = self.sock.recvfrom(1024)
+            data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
             if self.scanner:
                 self.scanner.receive(data)
 
@@ -81,7 +84,7 @@ class BluetoothLeAdvertiser:
         time_left = 0
 
         # As long as stop_advertising has not been called, loop forever
-        # Count down by 100 ms at a time
+        # Count down by 100 ms at a time, so that stopping the thread doesn't block for too long
         while not self.stopping:
             time.sleep(0.1)
             time_left -= 100

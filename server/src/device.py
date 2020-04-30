@@ -28,27 +28,41 @@ class Device:
 
     def __init__(self, addr):
         """Constructor for the Device class"""
+
+        # Give the device a random position and a random movement pattern
         (self.lat, self.lng) = Device.randomize_position()
         (self.bearing, self.speed, self.rotation_speed) = Device.randomize_movement()
+
+        # Give the device an internal name and store the UDP address
         self.name = f'device-{Device.next_id}'
         self.addr = addr
-        Device.next_id += 1
+
+        # Start a thread that makes the device move around
         self.thread = threading.Thread(name=self.name, target=self.thread_function, daemon=True)
         self.thread.start()
         self.tick_callback = None
 
+        # Increment the ID for the next device
+        Device.next_id += 1
+
     def thread_function(self):
+        """Thread for moving the device around"""
+
+        # Loop forever
         while True:
+            # Sleep a random amount of time and move some distance
             time_to_sleep = random.uniform(0.2, 0.8)
             time.sleep(time_to_sleep)
             self.tick(time_to_sleep)
 
     def distance_to(self, other_device):
         """Returns the distance in meters to another device"""
+
         return distance(self.lat, self.lng, other_device.lat, other_device.lng)
 
     def bearing_to(self, other_device):
         """Returns the bearing in degrees to another device"""
+
         return bearing(self.lat, self.lng, other_device.lat, other_device.lng)
 
     def tick(self, seconds_passed):
@@ -72,6 +86,7 @@ class Device:
     @staticmethod
     def randomize_position():
         """Returns a random location inside the geo-fence"""
+
         lat = random.uniform(MIN_LAT, MAX_LAT)
         lng = random.uniform(MIN_LNG, MAX_LNG)
 
@@ -80,6 +95,7 @@ class Device:
     @staticmethod
     def randomize_movement():
         """Returns a random direction, speed and rotation speed"""
+
         bearing = random.uniform(0, 360)
         speed = random.uniform(MIN_SPEED, MAX_SPEED)
         rotation_speed = random.uniform(MIN_ROTATION_SPEED, MAX_ROTATION_SPEED)
