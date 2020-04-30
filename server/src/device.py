@@ -6,15 +6,15 @@ import time
 from latlng import distance, move, bearing, geofence
 
 # This geo-fence is a rough square in Lindholmen, Göteborg
-MIN_LAT = 57.7047
-MAX_LAT = 57.7093
+MIN_LAT = 57.7064
+MAX_LAT = 57.7074
 
-MIN_LNG = 11.9281
-MAX_LNG = 11.9379
+MIN_LNG = 11.9359
+MAX_LNG = 11.9393
 
 # Speeds are in m/s
-MIN_SPEED = 2
-MAX_SPEED = 5
+MIN_SPEED = 1
+MAX_SPEED = 2
 
 # Rotation speeds are in degrees/s
 MIN_ROTATION_SPEED = -5

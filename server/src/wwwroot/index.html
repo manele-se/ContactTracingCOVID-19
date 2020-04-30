@@ -19,9 +19,9 @@
 
     <script>
         // Initial values for the Map instance
-        const CENTER_LAT = 57.707;
-        const CENTER_LNG = 11.933;
-        const INITIAL_ZOOM = 16;
+        const CENTER_LAT = 57.7069;
+        const CENTER_LNG = 11.9376;
+        const INITIAL_ZOOM = 19;
         const MAP_TYPE = 'satellite'
 
         // Store all devices by their name
@@ -36,7 +36,6 @@
             ws.onmessage = evt => {
                 // Parse the message
                 const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
-                console.log(`An action of type "${action}" for device "${name}"`);
 
                 // Check if the device is known
                 let device = devices[name];
@@ -70,6 +69,7 @@
                         break;
 
                     case 'receive':
+                        console.log(`Device "${name}" received a message`);
                         break;
                 }
             };

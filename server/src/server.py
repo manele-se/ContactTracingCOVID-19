@@ -14,12 +14,10 @@ from device import Device
 # Maximum number of bytes sent
 UDP_PACKET_SIZE = 1024
 
-# Signal strength of 60 meters away have a   0 % chance of arriving
-# Signal strength of  3 meters away have a 100 % chance of arriving
-MIN_DISTANCE = 60
-MAX_DISTANCE = 3
-MIN_STRENGTH = 1.0 / (MIN_DISTANCE + 1)
-MAX_STRENGTH = 1.0 / (MAX_DISTANCE + 1)
+# Signal strength of 10 meters away have a   0 % chance of arriving
+# Signal strength of  5 meters away have a 100 % chance of arriving
+MIN_DISTANCE = 5
+MAX_DISTANCE = 10
 
 # Port number for the web server
 WWW_PORT = 8008
@@ -70,10 +68,17 @@ class Server:
     def handle_incoming_broadcast(self, sock, data, sender_addr):
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
 
-        print(f'"{sender_addr}" says "{data}')
-
         # Get the Device instance for this address, or create a new one if this is a new address
         sender = self.get_of_create_device_from_addr(sender_addr)
+
+        print(f'"{sender.name}" says "{data}')
+
+        # Send broadcast to WebSocket clients
+        for ws_handler in self.web_socket_handlers:
+            ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
+
+        # Use a random threshold to sort of simulate real-world conditions
+        threshold = random.uniform(MIN_DISTANCE, MAX_DISTANCE)
 
         # Loop over all other devices
         for receiver in self.devices_by_addr.values():
@@ -83,18 +88,14 @@ class Server:
             # Get the distance between sender and receiver
             distance = sender.distance_to(receiver)
 
-            # "Fake" a signal strength <= 1.0
-            signal_strength = 1.0 / (1.0 + distance)
-
-            # Use a random threshold to sort of simulate real-world conditions
-            threshold = random.uniform(MIN_STRENGTH, MAX_STRENGTH)
-            if signal_strength > threshold:
+            if distance < threshold:
                 # If signal is strong enough, relay the packet to the receiver
+                print(f'Relaying to {receiver.name}')
                 sock.sendto(data, receiver.addr)
 
-        # Send broadcast to WebSocket clients
-        for ws_handler in self.web_socket_handlers:
-            ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
+                # Send receive event to WebSocket clients
+                for ws_handler in self.web_socket_handlers:
+                    ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
 
     def get_of_create_device_from_addr(self, sender_addr):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
@@ -118,8 +119,6 @@ class Server:
 
     def device_tick_callback(self, name, lat, lng, bearing):
         """This callback is called when a device moves"""
-
-        print(f'{name} has moved to {lat:.6f}, {lng:.6f}')
 
         # Send movement to WebSocket clients
         for ws_handler in self.web_socket_handlers:
@@ -165,10 +164,30 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
 
     def send_device_broadcast(self, name, lat, lng):
-        pass
+        """Send information to the client about a device broadcast"""
+        json_data = json.dumps({
+            'action': 'broadcast',
+            'name': name,
+            'lat': lat,
+            'lng': lng
+        })
 
-    def send_device_received(self, name):
-        pass
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+
+    def send_device_received(self, name, lat, lng):
+        """Send information to the client about a device broadcast"""
+        json_data = json.dumps({
+            'action': 'receive',
+            'name': name,
+            'lat': lat,
+            'lng': lng
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
 
 server = Server()
 
