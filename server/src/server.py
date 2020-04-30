@@ -5,8 +5,12 @@ import threading
 import time
 from device import Device
 
+# Maximum number of bytes sent
 UDP_PACKET_SIZE = 1024
-MIN_DISTANCE = 40
+
+# Signal strength of 60 meters away have a   0 % chance of arriving
+# Signal strength of  3 meters away have a 100 % chance of arriving
+MIN_DISTANCE = 60
 MAX_DISTANCE = 3
 MIN_STRENGTH = 1.0 / (MIN_DISTANCE + 1)
 MAX_STRENGTH = 1.0 / (MAX_DISTANCE + 1)
@@ -23,12 +27,15 @@ class Server:
         # This dict stores devices by their UDP address
         self.devices_by_addr = dict()
 
-    def start(self):
-        # Start the UDP server thread
-        self.bluetooth_thread = threading.Thread(name='bluetooth', target=self.bluetooth_run, daemon=True)
+        # This dict stores devices by their internal name
+        self.devices_by_name = dict()
+
+        # Start the UDP server thread for simulating bluetooth
+        self.bluetooth_thread = threading.Thread(name='bluetooth', target=self.bluetooth_thread_function, daemon=True)
         self.bluetooth_thread.start()
 
-    def bluetooth_run(self):
+        # Start the web server, hosting the Google Maps frontend
+    def bluetooth_thread_function(self):
         """The thread running the UDP server"""
 
         # Start a UDP socket and listen for incoming packets
@@ -46,16 +53,11 @@ class Server:
 
         print(f'"{sender_addr}" says "{data}')
 
-        # Check if the sender's address is already known or not
-        if sender_addr in self.devices_by_addr:
-            sender = self.devices_by_addr[sender_addr]
-        else:
-            # This address is unknown; create a new device and store it
-            sender = Device()
-            self.devices_by_addr[sender_addr] = sender
+        # Get the Device instance for this address, or create a new one if this is a new address
+        sender = self.get_of_create_device_from_addr(sender_addr)
 
         # Loop over all other devices
-        for receiver_addr, receiver in self.devices_by_addr.items():
+        for receiver in self.devices_by_addr.values():
             if sender == receiver:
                 continue
 
@@ -65,19 +67,35 @@ class Server:
             # "Fake" a signal strength <= 1.0
             signal_strength = 1.0 / (1.0 + distance)
 
-            # Signal strength of 40 meters away have a   0 % chance of arriving
-            # Signal strength of  3 meters away have a 100 % chance of arriving
+            # Use a random threshold to sort of simulate real-world conditions
             threshold = random.uniform(MIN_STRENGTH, MAX_STRENGTH)
             if signal_strength > threshold:
                 # If signal is strong enough, relay the packet to the receiver
-                sock.sendto(data, receiver_addr)
+                sock.sendto(data, receiver.addr)
+
+    def get_of_create_device_from_addr(self, sender_addr):
+        """If the sender's address is known, return the device for that address, otherwise add a new device"""
+
+        # Check if the sender's address is already known or not
+        if sender_addr in self.devices_by_addr:
+            # This address is known; return the already known device
+            return self.devices_by_addr[sender_addr]
+        else:
+            # This address is unknown; create a new device and store it
+            sender = Device(sender_addr)
+            self.devices_by_addr[sender_addr] = sender
+            self.devices_by_name[sender.name] = sender
+            # Start listening to the device's movements
+            sender.tick_callback = self.device_tick_callback
+            return sender
 
     def tick(self, seconds_passed):
-        for device in self.devices_by_addr.values():
-            device.tick(seconds_passed)
+        pass
+
+    def device_tick_callback(self, name, lat, lng, bearing):
+        print(f'{name} has moved to {lat:.6f}, {lng:.6f}')
 
 server = Server()
-server.start()
 
 while True:
     time.sleep(1.0)

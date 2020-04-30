@@ -1,4 +1,5 @@
 
+import os
 import random
 import time
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
@@ -10,7 +11,8 @@ def receive(data):
 advertiser = BluetoothLeAdvertiser()
 
 # Start advertising
-advertiser.start_advertising(1000, str(random.randrange(1000, 9999)).encode('utf-8'))
+data = os.urandom(4)  # get 4 random bytes
+advertiser.start_advertising(1000, data)
 
 # Create a scanner
 scanner = BluetoothLeScanner(receive)
