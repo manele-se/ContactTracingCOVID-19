@@ -92,6 +92,10 @@ class Server:
                 # If signal is strong enough, relay the packet to the receiver
                 sock.sendto(data, receiver.addr)
 
+        # Send broadcast to WebSocket clients
+        for ws_handler in self.web_socket_handlers:
+            ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
+
     def get_of_create_device_from_addr(self, sender_addr):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
 
@@ -145,11 +149,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         """The client sent a message to this WebSocket connection"""
 
         print(f'WebSocket incoming message: {message}')
-        self.write_message('OK')
 
     def send_device_moved(self, name, lat, lng, bearing):
         """Send information to the client about a device movement"""
         json_data = json.dumps({
+            'action': 'move',
             'name': name,
             'lat': lat,
             'lng': lng,
@@ -160,7 +164,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
 
-    def send_device_sent(self, name):
+    def send_device_broadcast(self, name, lat, lng):
         pass
 
     def send_device_received(self, name):

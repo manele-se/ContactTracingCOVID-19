@@ -51,7 +51,7 @@ class Device:
         # Loop forever
         while True:
             # Sleep a random amount of time and move some distance
-            time_to_sleep = random.uniform(0.2, 0.8)
+            time_to_sleep = random.uniform(0.2, 0.4)
             time.sleep(time_to_sleep)
             self.tick(time_to_sleep)
 

@@ -21,13 +21,75 @@
         // Initial values for the Map instance
         const CENTER_LAT = 57.707;
         const CENTER_LNG = 11.933;
-        const INITIAL_ZOOM = 17;
+        const INITIAL_ZOOM = 16;
         const MAP_TYPE = 'satellite'
+
+        // Store all devices by their name
+        const devices = { };
+
+        function connectToWebSocket(map) {
+            // Connect to the websocket endpoint
+            const wsAddress = `ws://${document.location.host}/ws`;
+            const ws = new WebSocket(wsAddress);
+
+            // Incoming message from the server
+            ws.onmessage = evt => {
+                // Parse the message
+                const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
+                console.log(`An action of type "${action}" for device "${name}"`);
+
+                // Check if the device is known
+                let device = devices[name];
+
+                if (!device) {
+                    // This is a new device:
+
+                    // The name is on the format "device-N". Get the "N" part and use it as a label.
+                    const label = name.split('-')[1];
+
+                    // Create a new marker on the map
+                    device = new google.maps.Marker({
+                        position: new google.maps.LatLng(lat, lng),
+                        title: name,
+                        label: label
+                    });
+                    device.setMap(map);
+
+                    // Add the device
+                    devices[name] = device;
+                }
+
+                switch (action) {
+                    case 'move':
+                        // Move the marker to the device's new position
+                        device.setPosition(new google.maps.LatLng(lat, lng));
+                        break;
+
+                    case 'broadcast':
+
+                        break;
+
+                    case 'receive':
+                        break;
+                }
+            };
+
+            // Connection was closed or broken. Retry connection after a second.
+            ws.onclose = evt => {
+                console.log('Closed WebSocket connection. Retrying...');
+                window.setTimeout(() => connectToWebSocket(map), 1000);
+            };
+
+            ws.onopen = evt => {
+                console.log('WebSocket connection established.');
+            };
+        }
 
         /**
          * This function gets called when the Google Maps API has been loaded
          */
         function initMap() {
+            // Find the <div id="map"> element
             const mapElement = document.getElementById('map');
 
             // Create a Map instance showing the selected region
@@ -38,15 +100,7 @@
                 disableDefaultUI: true
             });
 
-            // Connect to the websocket endpoint
-            const wsAddress = `ws://${document.location.host}/ws`;
-            const ws = new WebSocket(wsAddress);
-            ws.onmessage = evt => {
-                console.log(evt.data);
-            };
-            ws.onopen = evt => {
-                ws.send('connect');
-            }
+            connectToWebSocket(map);
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCngI_6-vhZ0jL8JYsXxuwnFCYkLxTRvUc&callback=initMap"
