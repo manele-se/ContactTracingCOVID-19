@@ -114,6 +114,14 @@ class Server:
             sender.tick_callback = self.device_tick_callback
             return sender
 
+    def move_device(self, name, lat, lng):
+        """The device was moved by "the hand of God" (in the web interface)"""
+        if name in self.devices_by_name:
+            device = self.devices_by_name[name]
+            device.lat = lat
+            device.lng = lng
+            self.device_tick_callback(name, lat, lng, device.bearing)
+
     def tick(self, seconds_passed):
         pass
 
@@ -147,7 +155,12 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         """The client sent a message to this WebSocket connection"""
 
-        print(f'WebSocket incoming message: {message}')
+        message = json.loads(message)
+        if message['action'] == 'move':
+            name = message['name']
+            lat = message['lat']
+            lng = message['lng']
+            WebSocketHandler.server.move_device(name, lat, lng)
 
     def send_device_moved(self, name, lat, lng, bearing):
         """Send information to the client about a device movement"""

@@ -35,10 +35,13 @@
         // Store all devices by their name
         const devices = { };
 
+        let ws;
+        let map;
+
         /**
          * Returns a device marker. If the name is already known, returns an existing marker. Otherwise creates a new.
          */
-        function getOrCreateDeviceMarker(name, map) {
+        function getOrCreateDeviceMarker(name) {
             if (name in devices) {
                 // This is a known device
                 return devices[name];
@@ -51,9 +54,27 @@
                 const newDevice = new google.maps.Marker({
                     position: new google.maps.LatLng(CENTER_LAT, CENTER_LNG),
                     title: name,
-                    label: label
+                    label: label,
+                    draggable: true,
+                    clickable: true
                 });
+
                 newDevice.setMap(map);
+                newDevice.addListener('click', () => {
+                    console.log(`${name} clicked`);
+                });
+                newDevice.addListener('dragend', evt => {
+                    const newLat = evt.latLng.lat();
+                    const newLng = evt.latLng.lng();
+                    console.log(`${name} dragged to ${newLat}, ${newLng}`);
+                    const message = {
+                        'action': 'move',
+                        'name': name,
+                        'lat': newLat,
+                        'lng': newLng
+                    };
+                    ws.send(JSON.stringify(message));
+                });
 
                 // Add the device
                 devices[name] = newDevice;
@@ -65,7 +86,7 @@
         /**
          * Create a circle on the map that grows to 10 meters in radius
          */
-        function showBroadcastCircle(lat, lng, map) {
+        function showBroadcastCircle(lat, lng) {
             // Create a small circle
             const circle = new google.maps.Circle({
                 center: new google.maps.LatLng(lat, lng),
@@ -88,10 +109,10 @@
         /**
          * Connect to the WebSocket endpoint and start communicating
          */
-        function connectToWebSocket(map) {
+        function connectToWebSocket() {
             // Get the WecSocket URL
             const wsAddress = `ws://${document.location.host}/ws`;
-            const ws = new WebSocket(wsAddress);
+            ws = new WebSocket(wsAddress);
 
             // Connection was established.
             ws.onopen = evt => {
@@ -101,7 +122,7 @@
             // Connection was closed or broken. Retry connection after a second.
             ws.onclose = evt => {
                 console.log('Closed WebSocket connection. Retrying...');
-                window.setTimeout(() => connectToWebSocket(map), 1000);
+                window.setTimeout(() => connectToWebSocket(), 1000);
             };
 
             // Incoming message from the server
@@ -110,7 +131,7 @@
                 const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
 
                 // Check if the device is known
-                const device = getOrCreateDeviceMarker(name, map);
+                const device = getOrCreateDeviceMarker(name);
 
                 switch (action) {
                     case 'move':
@@ -120,7 +141,7 @@
 
                     case 'broadcast':
                         // Show a circle on the map that grows over time from 1 meter radius to 10 meter radius
-                        showBroadcastCircle(lat, lng, map);
+                        showBroadcastCircle(lat, lng);
                         break;
 
                     case 'receive':
@@ -138,7 +159,7 @@
             const mapElement = document.getElementById('map');
 
             // Create a Map instance showing the selected region
-            const map = new google.maps.Map(mapElement, {
+            map = new google.maps.Map(mapElement, {
                 center: { lat: CENTER_LAT, lng: CENTER_LNG },
                 zoom: INITIAL_ZOOM,
                 mapTypeId: MAP_TYPE,
@@ -146,6 +167,8 @@
             });
 
             connectToWebSocket(map);
+
+            return map;
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCngI_6-vhZ0jL8JYsXxuwnFCYkLxTRvUc&callback=initMap"
