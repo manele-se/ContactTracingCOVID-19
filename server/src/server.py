@@ -3,6 +3,8 @@ import random
 import socket
 import threading
 import time
+import tornado.ioloop
+import tornado.web
 from device import Device
 
 # Maximum number of bytes sent
@@ -15,12 +17,15 @@ MAX_DISTANCE = 3
 MIN_STRENGTH = 1.0 / (MIN_DISTANCE + 1)
 MAX_STRENGTH = 1.0 / (MAX_DISTANCE + 1)
 
+# Port number for the web server
+WWW_PORT = 8008
+
 class Server:
     """Acts as intermediary for UDP packets, simulating Bluetooth LE between devices that are close
        enough to each other."""
 
     def __init__(self, udp_ip='127.0.0.1', udp_port=50000):
-        """Creates and starts a UDP server"""
+        """Creates and starts the simulation server"""
         self.udp_ip = udp_ip
         self.udp_port = udp_port
 
@@ -35,6 +40,12 @@ class Server:
         self.bluetooth_thread.start()
 
         # Start the web server, hosting the Google Maps frontend
+        tornado_app = tornado.web.Application([
+            (r'/(.*)', tornado.web.StaticFileHandler, {'path': './wwwroot', 'default_filename': 'index.html'})
+        ])
+        tornado_app.listen(WWW_PORT)
+        tornado.ioloop.IOLoop.instance().start()
+
     def bluetooth_thread_function(self):
         """The thread running the UDP server"""
 
@@ -85,6 +96,7 @@ class Server:
             sender = Device(sender_addr)
             self.devices_by_addr[sender_addr] = sender
             self.devices_by_name[sender.name] = sender
+
             # Start listening to the device's movements
             sender.tick_callback = self.device_tick_callback
             return sender
