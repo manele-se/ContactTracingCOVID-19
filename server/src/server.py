@@ -1,10 +1,14 @@
 
+# https://www.tornadoweb.org/en/stable/websocket.html
+
+import json
 import random
 import socket
 import threading
 import time
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
 from device import Device
 
 # Maximum number of bytes sent
@@ -40,11 +44,15 @@ class Server:
         self.bluetooth_thread.start()
 
         # Start the web server, hosting the Google Maps frontend
+        WebSocketHandler.server = self
+        self.web_socket_handlers = set()
         tornado_app = tornado.web.Application([
+            (r'/ws', WebSocketHandler),
             (r'/(.*)', tornado.web.StaticFileHandler, {'path': './wwwroot', 'default_filename': 'index.html'})
         ])
         tornado_app.listen(WWW_PORT)
-        tornado.ioloop.IOLoop.instance().start()
+        self.ioloop = tornado.ioloop.IOLoop.instance()
+        self.ioloop.start()
 
     def bluetooth_thread_function(self):
         """The thread running the UDP server"""
@@ -105,7 +113,58 @@ class Server:
         pass
 
     def device_tick_callback(self, name, lat, lng, bearing):
+        """This callback is called when a device moves"""
+
         print(f'{name} has moved to {lat:.6f}, {lng:.6f}')
+
+        # Send movement to WebSocket clients
+        for ws_handler in self.web_socket_handlers:
+            ws_handler.send_device_moved(name, lat, lng, bearing)
+
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
+    """WebSocket connection handler for real-time updates in the web user interface"""
+
+    server = None
+
+    def open(self):
+        """A new WebSocket connection was established"""
+
+        # Add this handler to the server's set of handlers
+        WebSocketHandler.server.web_socket_handlers.add(self)
+        print('WebSocket connection opened')
+        self.set_nodelay(True)
+
+    def on_close(self):
+        """This WebSocket connection was closed"""
+
+        # Remove this handler from the server's set of handlers
+        WebSocketHandler.server.web_socket_handlers.remove(self)
+        print('WebSocket connection closed')
+
+    def on_message(self, message):
+        """The client sent a message to this WebSocket connection"""
+
+        print(f'WebSocket incoming message: {message}')
+        self.write_message('OK')
+
+    def send_device_moved(self, name, lat, lng, bearing):
+        """Send information to the client about a device movement"""
+        json_data = json.dumps({
+            'name': name,
+            'lat': lat,
+            'lng': lng,
+            'bearing': bearing
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+
+    def send_device_sent(self, name):
+        pass
+
+    def send_device_received(self, name):
+        pass
 
 server = Server()
 

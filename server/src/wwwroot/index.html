@@ -37,6 +37,16 @@
                 mapTypeId: MAP_TYPE,
                 disableDefaultUI: true
             });
+
+            // Connect to the websocket endpoint
+            const wsAddress = `ws://${document.location.host}/ws`;
+            const ws = new WebSocket(wsAddress);
+            ws.onmessage = evt => {
+                console.log(evt.data);
+            };
+            ws.onopen = evt => {
+                ws.send('connect');
+            }
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCngI_6-vhZ0jL8JYsXxuwnFCYkLxTRvUc&callback=initMap"
