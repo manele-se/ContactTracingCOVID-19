@@ -61,18 +61,16 @@ class Client:
         #shuffle the ids#
         random.shuffle(eph_ids)
         return eph_ids
-            
-            
-            
-           
-    
    
     def start_listen_to_ephids(self):
         """starting the thread that listen to other devices"""
-        pass
-    
-    def listen_ephids_thread(self):
-        pass
+        bluetooth_scanner= BluetoothLeScanner(self.receive_ephid)
+  
+  
+    def receive_ephid(self, ephid):
+        with open('Heard_EphIds.txt', 'a') as file:
+            file.write(ephid.hex())
+            file.write('\n')
     
     def start_download_infected_sk(self):
         """ download the list with the sk of those pepole who have been declared infected"""
