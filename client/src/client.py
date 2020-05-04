@@ -3,6 +3,8 @@ import os
 import random
 import time
 import threading
+import secrets
+import hmac
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
 
 class Client: 
@@ -13,27 +15,18 @@ class Client:
         The device receives EphIDs over a simulated Bluetooth connection"""
     
     def __init__(self):
-        self.broadcast()
-        self.get_ephids()
-        
-    def generate_key(self):
-        self.key = '123'
+        self.start_broadcast()
+        self.start_listen_to_ephids()
+        self.start_download_infected_sk()
     
-    def add_key_to_file(self):
-        with open('Sk.txt', 'a') as file:
-            file.write(self.key)
-            file.write('\n')
+ 
+    def start_broadcast(self):
+        """starting the broadcast thread"""
+        self.broadcast_thread = threading.Thread(target=self.broadcasting_ids_thread)
+        self.broadcast_thread.start()
     
-    def generate_ephids(self):
-        pass
-    
-    def broadcast(self):
-        self.broadcast_thread = threading.Thread(target=self.broadcasting_ids)
-    
-    def get_ephids(self):
-        pass
-    
-    def broadcasting_ids(self):
+     #thread#
+    def broadcasting_ids_thread(self):
         #send out the EphIDs, every 5 sec send a new. 
         #every two minutes creates a new SK
         
@@ -42,9 +35,51 @@ class Client:
         while True:
             self.generate_key()
             self.add_key_to_file()
-            time.sleep(120)
             eph_ids= self.generate_ephids()
-            advertiser.start_advertising(1000, eph_ids)
+            for eph_id in eph_ids:
+                 advertiser.start_advertising(1000, eph_id)
+                 time.sleep(5)
+        
+    def generate_key(self):
+        #generate a crypthographically strong random secret key
+        self.key = secrets.token_bytes(32)
+    
+    def add_key_to_file(self):
+        with open('Sk.txt', 'a') as file:
+            file.write(self.key.hex())
+            file.write('\n')
+    
+    def generate_ephids(self):
+        #randomize order#
+        eph_ids=[]
+        hashed_key= hmac.new(self.key,digestmod='sha256')
+        for i in range (0,24):
+            #use hmac to generate ids #
+            hashed_key.update(bytearray([i]))
+            eph_id=hashed_key.digest()
+            eph_ids.append(eph_id)
+        #shuffle the ids#
+        random.shuffle(eph_ids)
+        return eph_ids
+            
+            
+            
+           
+    
+   
+    def start_listen_to_ephids(self):
+        """starting the thread that listen to other devices"""
+        pass
+    
+    def listen_ephids_thread(self):
+        pass
+    
+    def start_download_infected_sk(self):
+        """ download the list with the sk of those pepole who have been declared infected"""
+        pass
+   
+    def dowload_infected_thread(self):
+       pass
             
 
 

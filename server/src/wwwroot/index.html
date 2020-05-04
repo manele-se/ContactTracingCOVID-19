@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Covid-19 Device simulation</title>
     <style>
-        html, body, #map {
+        html,
+        body,
+        #map {
             display: block;
             margin: 0;
             padding: 0;
@@ -14,6 +17,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="map"></div>
 
@@ -33,7 +37,7 @@
         };
 
         // Store all devices by their name
-        const devices = { };
+        const devices = {};
 
         let ws;
         let map;
@@ -45,8 +49,7 @@
             if (name in devices) {
                 // This is a known device
                 return devices[name];
-            }
-            else {
+            } else {
                 // The name is on the format "device-N". Get the "N" part and use it as a label.
                 const label = name.split('-')[1];
 
@@ -56,7 +59,19 @@
                     title: name,
                     label: label,
                     draggable: true,
-                    clickable: true
+                    clickable: true,
+                    icon: {
+                        url: "http://maps.google.com/mapfiles/kml/paddle/grn-blank.png"
+
+                        //for yellow one: person which receive the notification: 
+                        //"http://maps.google.com/mapfiles/kml/paddle/ylw-blank.png"
+
+                        //for the declared infected, red
+                        //"http://maps.google.com/mapfiles/kml/paddle/red-blank.png"
+
+                        //icon for hospital
+                        //create one
+                    }
                 });
 
                 newDevice.setMap(map);
@@ -128,7 +143,13 @@
             // Incoming message from the server
             ws.onmessage = evt => {
                 // Parse the message
-                const { name, lat, lng, bearing, action } = JSON.parse(evt.data);
+                const {
+                    name,
+                    lat,
+                    lng,
+                    bearing,
+                    action
+                } = JSON.parse(evt.data);
 
                 // Check if the device is known
                 const device = getOrCreateDeviceMarker(name);
@@ -160,7 +181,10 @@
 
             // Create a Map instance showing the selected region
             map = new google.maps.Map(mapElement, {
-                center: { lat: CENTER_LAT, lng: CENTER_LNG },
+                center: {
+                    lat: CENTER_LAT,
+                    lng: CENTER_LNG
+                },
                 zoom: INITIAL_ZOOM,
                 mapTypeId: MAP_TYPE,
                 disableDefaultUI: true
@@ -171,7 +195,7 @@
             return map;
         }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCngI_6-vhZ0jL8JYsXxuwnFCYkLxTRvUc&callback=initMap"
-            async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCngI_6-vhZ0jL8JYsXxuwnFCYkLxTRvUc&callback=initMap" async defer></script>
 </body>
+
 </html>
