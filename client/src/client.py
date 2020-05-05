@@ -52,20 +52,19 @@ class Client:
     def generate_ephids(self):
         #randomize order#
         eph_ids=[]
-        hashed_key= hmac.new(self.key,digestmod='sha256')
-        for i in range (0,24):
+        hashed_key= hmac.new(self.key, digestmod='sha256')
+        for i in range(0, 24):
             #use hmac to generate ids #
             hashed_key.update(bytearray([i]))
-            eph_id=hashed_key.digest()
+            eph_id=hashed_key.digest()[:16]
             eph_ids.append(eph_id)
-        #shuffle the ids#
+        #shuffle the ids#s
         random.shuffle(eph_ids)
         return eph_ids
    
     def start_listen_to_ephids(self):
         """starting the thread that listen to other devices"""
         bluetooth_scanner= BluetoothLeScanner(self.receive_ephid)
-  
   
     def receive_ephid(self, ephid):
         with open('Heard_EphIds.txt', 'a') as file:

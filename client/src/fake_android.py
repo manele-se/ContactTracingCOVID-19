@@ -63,14 +63,15 @@ class BluetoothLeAdvertiser:
     def start_advertising(self, interval=1000, periodic_data=b''):
         """The device will start advertising data at a set interval"""
 
-        print(f'Broadcasting EphIds: {periodic_data.hex()[:16]}')
+        print(f'Broadcasting EphIds: {periodic_data.hex()}')
 
-        self.stop_advertising()
         self.interval = interval
         self.periodic_data = periodic_data
-        self.thread = threading.Thread(target=self.thread_function, daemon=True)
-        self.stopping = False
-        self.thread.start()
+
+        if self.thread is None:
+            self.thread = threading.Thread(target=self.thread_function, daemon=True)
+            self.stopping = False
+            self.thread.start()
 
     def stop_advertising(self):
         """The device will stop advertising"""
@@ -81,16 +82,7 @@ class BluetoothLeAdvertiser:
             self.thread = None
 
     def thread_function(self):
-        time_left = 0
-
         # As long as stop_advertising has not been called, loop forever
-        # Count down by 100 ms at a time, so that stopping the thread doesn't block for too long
         while not self.stopping:
-            time.sleep(0.1)
-            time_left -= 100
-
-            # Check if it's time to advertise
-            if time_left <= 0:
-                # Add another interval for the next countdown
-                time_left += self.interval
-                client.send(self.periodic_data)
+            time.sleep(self.interval * 0.001)
+            client.send(self.periodic_data)
