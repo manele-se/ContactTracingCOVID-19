@@ -50,12 +50,16 @@ class Server:
         # Start the web server, hosting the Google Maps frontend
         WebSocketHandler.server = self
         MoveRequestHandler.server = self
+        WarningRequestHandler.server=self
         self.web_socket_handlers = set()
         tornado_app = tornado.web.Application([
             (r'/ws', WebSocketHandler),
             (r'/move', MoveRequestHandler),
+            (r'/warning', WarningRequestHandler),
             (r'/(.*)', tornado.web.StaticFileHandler, {'path': self.wwwroot_path, 'default_filename': 'index.html'})
+            
         ])
+      
         tornado_app.listen(WWW_PORT)
         self.ioloop = tornado.ioloop.IOLoop.instance()
         self.ioloop.start()
@@ -207,6 +211,18 @@ class MoveRequestHandler(tornado.web.RequestHandler):
         elif action == 'toggle':
             device.still = not device.still
 
+class WarningRequestHandler(tornado.web.RequestHandler):
+    """Http handler for warning commands performed in the web user interface"""
+    server = None
+
+    def get(self):
+        device_name = self.get_argument('name')
+        # Send changes to WebSocket clients
+        for ws_handler in WarningRequestHandler.server.web_socket_handlers:
+            ws_handler.send_warning_to_device(device_name)
+        
+    
+
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     """WebSocket connection handler for real-time updates in the web user interface"""
 
@@ -271,6 +287,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         """Send information to the client about a device changing color"""
         json_data = json.dumps({
             'action': 'change_color_red',
+            'name': name
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        
+    def send_warning_to_device(self, name):
+        """Send information to the client about a device changing color"""
+        json_data = json.dumps({
+            'action': 'change_color_yellow',
             'name': name
         })
 

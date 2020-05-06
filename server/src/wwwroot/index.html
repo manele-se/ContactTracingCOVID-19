@@ -194,13 +194,17 @@
                         showBroadcastCircle(lat, lng);
                         break;
 
-                    case 'change_color':
+                    case 'change_color_red':
                         //change color to red to the sick marker
                         setTimeout(() => device.setIcon('http://maps.google.com/mapfiles/kml/paddle/red-blank.png'), 2000);
                         break;
 
-                    case 'receive':
+                    case 'change_color_yellow':
                         device.setIcon('http://maps.google.com/mapfiles/kml/paddle/ylw-blank.png');
+                        break;
+
+                    case 'receive':
+
                         break;
                 }
             };

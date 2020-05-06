@@ -6,6 +6,7 @@ import threading
 import secrets
 import sys
 import hmac
+import urllib.request
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
 
 class Client: 
@@ -78,11 +79,11 @@ class Client:
                 file.write('\n')
     
     def start_download_infected_sk(self):
-        """ download the list with the sk of those pepole who have been declared infected"""
         self.download_thread = threading.Thread(target=self.download_infected_thread)
         self.download_thread.start()
    
     def download_infected_thread(self):
+        """ download the list with the sk of those pepole who have been declared infected"""
         while True:
             #read from the health care database#
             with open('healthCareDataBase.txt', 'r') as file:
@@ -93,9 +94,12 @@ class Client:
                     for infected_ephid in infected_ephids:
                         #check if there is a match#
                         if infected_ephid in self.unique_id:
+                            #do it bigger and red
                             print("Warning. You have been in contact with a carrier of COVID-19.")
                             print("Please isolate yourself and check if you are a carrier")
+                            #communicate with the simutation framework
+                            urllib.request.urlopen(f'http://localhost:8008/warning?name={self.name}')
                             return
-            time.sleep(120)
+            time.sleep(20)
 
 client = Client(sys.argv[1])
