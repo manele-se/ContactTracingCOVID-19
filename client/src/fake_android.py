@@ -3,6 +3,7 @@
 # https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner
 # https://stackoverflow.com/questions/27893804/udp-client-server-socket-in-python
 
+import random
 import socket
 import threading
 import time
@@ -65,7 +66,6 @@ class BluetoothLeAdvertiser:
 
         print(f'Broadcasting EphId: {periodic_data.hex()}')
 
-        self.interval = interval
         self.periodic_data = periodic_data
 
         if self.thread is None:
@@ -83,6 +83,7 @@ class BluetoothLeAdvertiser:
 
     def thread_function(self):
         # As long as stop_advertising has not been called, loop forever
+        time.sleep(random.uniform(0, self.interval * 0.001))
         while not self.stopping:
             time.sleep(self.interval * 0.001)
             client.send(self.periodic_data)
