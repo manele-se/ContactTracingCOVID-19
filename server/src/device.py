@@ -41,13 +41,17 @@ class Device:
         self.name = f'device-{Device.next_id}'
         self.addr = addr
 
+        # Keep track of last action
+        self.last_action = time.time()
+        self.zombie = False
+
         # Start a thread that makes the device move around
         self.thread = threading.Thread(name=self.name, target=self.thread_function, daemon=True)
         self.thread.start()
         self.tick_callback = None
 
         # Start without movement
-        self.still = False
+        self.still = True
 
         # Increment the ID for the next device
         Device.next_id += 1
@@ -56,7 +60,7 @@ class Device:
         """Thread for moving the device around"""
 
         # Loop forever
-        while True:
+        while not self.zombie:
             # Sleep a random amount of time and move some distance
             time_to_sleep = random.uniform(0.2, 0.4)
             time.sleep(time_to_sleep)

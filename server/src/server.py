@@ -23,6 +23,9 @@ MAX_DISTANCE = 10
 # Port number for the web server
 WWW_PORT = 8008
 
+# Maximum number of seconds without a Bluetooth broadcast
+ZOMBIE_MAX_AGE = 5
+
 class Server:
     """Acts as intermediary for UDP packets, simulating Bluetooth LE between devices that are close
        enough to each other."""
@@ -39,20 +42,46 @@ class Server:
         # This dict stores devices by their internal name
         self.devices_by_name = dict()
 
+        # Start a thread to clean up zombie devices
+        self.zombie_thread = threading.Thread(name='zombies', target=self.zombie_thread_function, daemon=True)
+        self.zombie_thread.start()
+
         # Start the UDP server thread for simulating bluetooth
         self.bluetooth_thread = threading.Thread(name='bluetooth', target=self.bluetooth_thread_function, daemon=True)
         self.bluetooth_thread.start()
 
         # Start the web server, hosting the Google Maps frontend
         WebSocketHandler.server = self
+        MoveRequestHandler.server = self
         self.web_socket_handlers = set()
         tornado_app = tornado.web.Application([
             (r'/ws', WebSocketHandler),
+            (r'/move', MoveRequestHandler),
             (r'/(.*)', tornado.web.StaticFileHandler, {'path': self.wwwroot_path, 'default_filename': 'index.html'})
         ])
         tornado_app.listen(WWW_PORT)
         self.ioloop = tornado.ioloop.IOLoop.instance()
         self.ioloop.start()
+
+    def zombie_thread_function(self):
+        """The thread cleaning up zombie devices"""
+
+        # Loop forever
+        while True:
+            time.sleep(1)
+            now = time.time()
+            threshold = now - ZOMBIE_MAX_AGE
+            # Get all zombies
+            zombies = list(filter(lambda d: d.last_action < threshold, self.devices_by_name.values()))
+            for zombie in zombies:
+                print(f'Deleting zombie {zombie.name}')
+                del self.devices_by_name[zombie.name]
+                del self.devices_by_addr[zombie.addr]
+                zombie.zombie = True
+                zombie.tick_callback = None
+                # Send removal to WebSocket clients
+                for ws_handler in self.web_socket_handlers:
+                    ws_handler.send_device_removed(zombie.name)
 
     def bluetooth_thread_function(self):
         """The thread running the UDP server"""
@@ -72,6 +101,7 @@ class Server:
 
         # Get the Device instance for this address, or create a new one if this is a new address
         sender = self.get_of_create_device_from_addr(sender_addr)
+        sender.last_action = time.time()
 
         # Send broadcast to WebSocket clients
         for ws_handler in self.web_socket_handlers:
@@ -109,6 +139,7 @@ class Server:
             sender = Device(sender_addr)
             self.devices_by_addr[sender_addr] = sender
             self.devices_by_name[sender.name] = sender
+            print(f'Discovered new device "{sender.name}"')
 
             # Start listening to the device's movements
             sender.tick_callback = self.device_tick_callback
@@ -121,6 +152,19 @@ class Server:
             device.lat = lat
             device.lng = lng
             self.device_tick_callback(name, lat, lng, device.bearing)
+            device.still = True
+
+    def stop_moving_device(self, name):
+        """The device was grabbed. The person decided to stop moving."""
+        if name in self.devices_by_name:
+            device = self.devices_by_name[name]
+            device.still = True
+
+    def toggle_moving_device(self, name):
+        """The device was clicked. The person decided to change their mind about moving."""
+        if name in self.devices_by_name:
+            device = self.devices_by_name[name]
+            device.still = not device.still
 
     def tick(self, seconds_passed):
         pass
@@ -131,6 +175,21 @@ class Server:
         # Send movement to WebSocket clients
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_device_moved(name, lat, lng, bearing)
+
+class MoveRequestHandler(tornado.web.RequestHandler):
+    """Http handler for move commands performed in the web user interface"""
+
+    server = None
+
+    def get(self):
+        device_name = self.get_argument('name')
+        action = self.get_argument('action')
+        device = MoveRequestHandler.server.devices_by_name[device_name]
+
+        if action == 'stop':
+            device.still = True
+        elif action == 'toggle':
+            device.still = not device.still
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     """WebSocket connection handler for real-time updates in the web user interface"""
@@ -156,11 +215,16 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         """The client sent a message to this WebSocket connection"""
 
         message = json.loads(message)
-        if message['action'] == 'move':
-            name = message['name']
+        name = message['name']
+        action = message['action']
+        if action == 'move':
             lat = message['lat']
             lng = message['lng']
             WebSocketHandler.server.move_device(name, lat, lng)
+        elif action == 'stop':
+            WebSocketHandler.server.stop_moving_device(name)
+        elif action == 'toggle':
+            WebSocketHandler.server.toggle_moving_device(name)
 
     def send_device_moved(self, name, lat, lng, bearing):
         """Send information to the client about a device movement"""
@@ -170,6 +234,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'lat': lat,
             'lng': lng,
             'bearing': bearing
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+
+    def send_device_removed(self, name):
+        """Send information to the client about a device removal"""
+        json_data = json.dumps({
+            'action': 'remove',
+            'name': name
         })
 
         # For thread safety, this message must be sent on the event loop thread

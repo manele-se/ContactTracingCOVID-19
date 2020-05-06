@@ -81,7 +81,6 @@ def avoid_circle(lat, lng, center_lat, center_lng, radius):
     dist = distance(lat, lng, center_lat, center_lng)
     bear = bearing(lat, lng, center_lat, center_lng)
     if dist < radius:
-        print(f'Too close to hospital! dist={dist}, bear={bear}. Moving {radius - dist} m in bearing {bear + 180}.')
         return move(lat, lng, radius - dist, bear + 180)
     else:
         return lat, lng

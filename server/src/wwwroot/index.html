@@ -32,9 +32,9 @@
         const HOSPITAL_LNG = 11.937991;
         const HOSPITAL_RADIUS = 25;
         const circleStyle = {
-            strokeColor: '#112299',
-            strokeOpacity: 0.8,
-            strokeWeight: 2.0,
+            strokeColor: 'none',
+            strokeOpacity: 0,
+            strokeWeight: 0,
             fillColor: '#5599ff',
             fillOpacity: 0.2
         };
@@ -86,15 +86,23 @@
 
                 newDevice.setMap(map);
                 newDevice.addListener('click', () => {
-                    console.log(`${name} clicked`);
+                    const message = {
+                        'action': 'toggle',
+                        'name': name
+                    };
+                    ws.send(JSON.stringify(message));
                 });
                 newDevice.addListener('dragstart', evt => {
                     newDevice.dragging = true;
+                    const message = {
+                        'action': 'stop',
+                        'name': name
+                    };
+                    ws.send(JSON.stringify(message));
                 });
                 newDevice.addListener('dragend', evt => {
                     const newLat = evt.latLng.lat();
                     const newLng = evt.latLng.lng();
-                    console.log(`${name} dragged to ${newLat}, ${newLng}`);
                     newDevice.dragging = false;
                     const message = {
                         'action': 'move',
@@ -117,22 +125,17 @@
          */
         function showBroadcastCircle(lat, lng) {
             // Create a small circle
-            const circle = new google.maps.Circle({
-                center: new google.maps.LatLng(lat, lng),
-                map: map,
-                radius: 0.5,
-                ...circleStyle
-            });
+            for (let r = 8; r <= 10; r++) {
+                const circle = new google.maps.Circle({
+                    center: new google.maps.LatLng(lat, lng),
+                    map: map,
+                    radius: r,
+                    ...circleStyle
+                });
 
-            // Let the circle grow over time
-            for (let r = 1; r <= 10; r += 0.5) {
-                window.setTimeout(() => {
-                    circle.setRadius(r);
-                }, r * 95);
+                // Remove the circle when it's done
+                window.setTimeout(() => circle.setMap(null), 450);
             }
-
-            // Remove the circle when it's done
-            window.setTimeout(() => circle.setMap(null), 1000);
         }
 
         /**
@@ -150,7 +153,7 @@
 
             // Connection was closed or broken. Retry connection after a second.
             ws.onclose = evt => {
-                console.log('Closed WebSocket connection. Retrying...');
+                console.warn('Closed WebSocket connection. Retrying...');
                 window.setTimeout(() => connectToWebSocket(), 1000);
             };
 
@@ -175,6 +178,11 @@
                         device.setPosition(new google.maps.LatLng(lat, lng));
                         break;
 
+                    case 'remove':
+                        // Remove the marker
+                        device.setMap(null);
+                        break;
+
                     case 'broadcast':
                         // Show a circle on the map that grows over time from 1 meter radius to 10 meter radius
                         device.setPosition(new google.maps.LatLng(lat, lng));
@@ -182,7 +190,6 @@
                         break;
 
                     case 'receive':
-                        console.log(`Device "${name}" received a message`);
                         break;
                 }
             };
