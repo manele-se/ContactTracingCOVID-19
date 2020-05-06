@@ -32,9 +32,9 @@
         const HOSPITAL_LNG = 11.937991;
         const HOSPITAL_RADIUS = 25;
         const circleStyle = {
-            strokeColor: 'none',
-            strokeOpacity: 0,
-            strokeWeight: 0,
+            strokeColor: '#112299',
+            strokeOpacity: 0.8,
+            strokeWeight: 2.0,
             fillColor: '#5599ff',
             fillOpacity: 0.2
         };
@@ -125,17 +125,22 @@
          */
         function showBroadcastCircle(lat, lng) {
             // Create a small circle
-            for (let r = 8; r <= 10; r++) {
-                const circle = new google.maps.Circle({
-                    center: new google.maps.LatLng(lat, lng),
-                    map: map,
-                    radius: r,
-                    ...circleStyle
-                });
+            const circle = new google.maps.Circle({
+                center: new google.maps.LatLng(lat, lng),
+                map: map,
+                radius: 0.5,
+                ...circleStyle
+            });
 
-                // Remove the circle when it's done
-                window.setTimeout(() => circle.setMap(null), 600 - r * 40);
+            // Let the circle grow over time
+            for (let r = 1; r <= 10; r += 0.5) {
+                window.setTimeout(() => {
+                    circle.setRadius(r);
+                }, r * 95);
             }
+
+            // Remove the circle when it's done
+            window.setTimeout(() => circle.setMap(null), 1000);
         }
 
         /**

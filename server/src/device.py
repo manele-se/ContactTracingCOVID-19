@@ -96,6 +96,10 @@ class Device:
         if self.tick_callback:
             self.tick_callback(self.name, self.lat, self.lng, self.bearing)
 
+
+    def is_in_hospital(self):
+        return distance(self.lat, self.lng,HOSPITAL_LAT,HOSPITAL_LNG) < HOSPITAL_RADIUS
+
     @staticmethod
     def randomize_position():
         """Returns a random location inside the geo-fence"""

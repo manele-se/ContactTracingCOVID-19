@@ -60,7 +60,7 @@ class Client:
         for i in range(0, 24):
             #use hmac to generate ids #
             hashed_key.update(bytearray([i]))
-            eph_id=hashed_key.digest()[:16]
+            eph_id=hashed_key.digest()
             eph_ids.append(eph_id)
         #shuffle the ids#s
         random.shuffle(eph_ids)
