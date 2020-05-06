@@ -3,6 +3,7 @@
 # https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner
 # https://stackoverflow.com/questions/27893804/udp-client-server-socket-in-python
 
+import json
 import random
 import socket
 import threading
@@ -55,11 +56,12 @@ class BluetoothLeScanner:
 class BluetoothLeAdvertiser:
     """Minimal simulation of the BluetoothLeAdvertiser class in the Android SDK"""
 
-    def __init__(self):
+    def __init__(self, client_name):
         self.thread = None
         self.stopping = False
         self.interval = 1000
         self.periodic_data = b''
+        self.client_name = client_name
 
     def start_advertising(self, interval=1000, periodic_data=b''):
         """The device will start advertising data at a set interval"""
@@ -86,4 +88,10 @@ class BluetoothLeAdvertiser:
         time.sleep(random.uniform(0, self.interval * 0.001))
         while not self.stopping:
             time.sleep(self.interval * 0.001)
-            client.send(self.periodic_data)
+            message_object = {
+                'name' : self.client_name,
+                'data' : self.periodic_data.hex()
+            }
+            message_json = json.dumps(message_object)
+            datagram = message_json.encode('utf-8')
+            client.send(datagram)

@@ -61,7 +61,7 @@
                 return devices[name];
             } else {
                 // The name is on the format "device-N". Get the "N" part and use it as a label.
-                const label = name.split('-')[1];
+                const label = name.substr(0, 1);
 
                 // Create a new marker on the map
                 const newDevice = new google.maps.Marker({
@@ -134,7 +134,7 @@
                 });
 
                 // Remove the circle when it's done
-                window.setTimeout(() => circle.setMap(null), 450);
+                window.setTimeout(() => circle.setMap(null), 600 - r * 40);
             }
         }
 

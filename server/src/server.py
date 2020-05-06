@@ -36,9 +36,6 @@ class Server:
         self.udp_ip = udp_ip
         self.udp_port = udp_port
 
-        # This dict stores devices by their UDP address
-        self.devices_by_addr = dict()
-
         # This dict stores devices by their internal name
         self.devices_by_name = dict()
 
@@ -76,7 +73,6 @@ class Server:
             for zombie in zombies:
                 print(f'Deleting zombie {zombie.name}')
                 del self.devices_by_name[zombie.name]
-                del self.devices_by_addr[zombie.addr]
                 zombie.zombie = True
                 zombie.tick_callback = None
                 # Send removal to WebSocket clients
@@ -96,11 +92,16 @@ class Server:
             data, addr = sock.recvfrom(UDP_PACKET_SIZE)
             self.handle_incoming_broadcast(sock, data, addr)
 
-    def handle_incoming_broadcast(self, sock, data, sender_addr):
+    def handle_incoming_broadcast(self, sock, datagram, sender_addr):
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
 
+        message_json = datagram.decode('utf-8')
+        message_object = json.loads(message_json)
+        sender_name = message_object['name']
+        data = bytearray.fromhex(message_object['data'])
+
         # Get the Device instance for this address, or create a new one if this is a new address
-        sender = self.get_of_create_device_from_addr(sender_addr)
+        sender = self.get_of_create_device(sender_addr, sender_name)
         sender.last_action = time.time()
 
         # Send broadcast to WebSocket clients
@@ -111,7 +112,7 @@ class Server:
         threshold = random.uniform(MIN_DISTANCE, MAX_DISTANCE)
 
         # Loop over all other devices
-        for receiver in self.devices_by_addr.values():
+        for receiver in self.devices_by_name.values():
             if sender == receiver:
                 continue
 
@@ -127,19 +128,18 @@ class Server:
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
 
-    def get_of_create_device_from_addr(self, sender_addr):
+    def get_of_create_device(self, sender_addr, sender_name):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
 
         # Check if the sender's address is already known or not
-        if sender_addr in self.devices_by_addr:
+        if sender_name in self.devices_by_name:
             # This address is known; return the already known device
-            return self.devices_by_addr[sender_addr]
+            return self.devices_by_name[sender_name]
         else:
             # This address is unknown; create a new device and store it
-            sender = Device(sender_addr)
-            self.devices_by_addr[sender_addr] = sender
-            self.devices_by_name[sender.name] = sender
-            print(f'Discovered new device "{sender.name}"')
+            sender = Device(sender_addr, sender_name)
+            self.devices_by_name[sender_name] = sender
+            print(f'Discovered new device "{sender_name}"')
 
             # Start listening to the device's movements
             sender.tick_callback = self.device_tick_callback

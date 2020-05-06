@@ -30,7 +30,7 @@ class Device:
        around randomly, and that can be told to move to a place."""
     next_id = 1
 
-    def __init__(self, addr):
+    def __init__(self, addr, name):
         """Constructor for the Device class"""
 
         # Give the device a random position and a random movement pattern
@@ -38,7 +38,7 @@ class Device:
         (self.bearing, self.speed, self.rotation_speed) = Device.randomize_movement()
 
         # Give the device an internal name and store the UDP address
-        self.name = f'device-{Device.next_id}'
+        self.name = name
         self.addr = addr
 
         # Keep track of last action

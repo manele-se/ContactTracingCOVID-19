@@ -15,10 +15,10 @@ class Client:
         the third with the declared infected Sks. 
         The device receives EphIDs over a simulated Bluetooth connection"""
     
-    def __init__(self, id):
+    def __init__(self, name):
         #an empty set#
         self.unique_id = set()
-        self.id = id
+        self.name = name
         self.start_broadcast()
         self.start_listen_to_ephids()
         self.start_download_infected_sk()
@@ -35,7 +35,7 @@ class Client:
         #every two minutes creates a new SK
         
         # Create an advertiser
-        advertiser = BluetoothLeAdvertiser()
+        advertiser = BluetoothLeAdvertiser(self.name)
         while True:
             self.generate_key()
             self.add_key_to_file()
@@ -49,7 +49,7 @@ class Client:
         self.key = secrets.token_bytes(32)
     
     def add_key_to_file(self):
-        with open(f'Sk{self.id}.txt', 'a') as file:
+        with open(f'Sk{self.name}.txt', 'a') as file:
             file.write(self.key.hex())
             file.write('\n')
     
@@ -71,7 +71,7 @@ class Client:
         bluetooth_scanner = BluetoothLeScanner(self.receive_ephid)
   
     def receive_ephid(self, ephid):
-        with open(f'Heard_EphIds{self.id}.txt', 'a') as file:
+        with open(f'Heard_EphIds{self.name}.txt', 'a') as file:
             if ephid not in self.unique_id:
                 self.unique_id.add(ephid)
                 file.write(ephid.hex())
