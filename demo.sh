@@ -1,8 +1,12 @@
-cd server/src
-python3 server.py &
-cd ../..
-cd client/src
-python3 client.py 1 &
-python3 client.py 2 &
-python3 client.py 3 &
-python3 client.py 4 &
+# Start a server and four clients
+# Requires tmux
+# Install tmux on Mac:
+# brew install tmux
+
+tmux new-session -d 'python3 server/src/server.py server/src/wwwroot'
+tmux split-window -h 'python3 client/src/client.py Alice'
+tmux split-window -v -l 75% 'python3 client/src/client.py Bob'
+tmux split-window -v -l 67% 'python3 client/src/client.py Carol'
+tmux split-window -v -l 50% 'python3 client/src/client.py Dave'
+open 'http://localhost:8008'
+tmux -2 attach-session -d
