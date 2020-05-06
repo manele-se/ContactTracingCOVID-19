@@ -3,7 +3,7 @@ import random
 import threading
 import time
 
-from latlng import distance, move, bearing, geofence
+from latlng import distance, move, bearing, geofence, avoid_circle
 
 # This geo-fence is a rough square in Lindholmen, Göteborg
 MIN_LAT = 57.7064
@@ -11,6 +11,10 @@ MAX_LAT = 57.7074
 
 MIN_LNG = 11.9359
 MAX_LNG = 11.9393
+
+HOSPITAL_LAT = 57.706976
+HOSPITAL_LNG = 11.937991
+HOSPITAL_RADIUS = 25
 
 # Speeds are in m/s
 MIN_SPEED = 1
@@ -42,6 +46,9 @@ class Device:
         self.thread.start()
         self.tick_callback = None
 
+        # Start without movement
+        self.still = False
+
         # Increment the ID for the next device
         Device.next_id += 1
 
@@ -53,7 +60,8 @@ class Device:
             # Sleep a random amount of time and move some distance
             time_to_sleep = random.uniform(0.2, 0.4)
             time.sleep(time_to_sleep)
-            self.tick(time_to_sleep)
+            if not self.still:
+                self.tick(time_to_sleep)
 
     def distance_to(self, other_device):
         """Returns the distance in meters to another device"""
@@ -75,6 +83,7 @@ class Device:
         # If the position was outside, pick a new random movement
         if was_outside:
             (self.bearing, self.speed, self.rotation_speed) = Device.randomize_movement()
+        (self.lat, self.lng) = avoid_circle(self.lat, self.lng, HOSPITAL_LAT, HOSPITAL_LNG, HOSPITAL_RADIUS)
 
         # Update the bearing using the rotational speed
         self.bearing = (self.bearing + self.rotation_speed * seconds_passed) % 360
@@ -89,6 +98,8 @@ class Device:
 
         lat = random.uniform(MIN_LAT, MAX_LAT)
         lng = random.uniform(MIN_LNG, MAX_LNG)
+
+        lat, lng = avoid_circle(lat, lng, HOSPITAL_LAT, HOSPITAL_LNG, HOSPITAL_RADIUS)
 
         return lat, lng
 

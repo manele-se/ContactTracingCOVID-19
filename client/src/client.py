@@ -15,10 +15,10 @@ class Client:
         the third with the declared infected Sks. 
         The device receives EphIDs over a simulated Bluetooth connection"""
     
-    def __init__(self,id):
+    def __init__(self, id):
         #an empty set#
-        self.unique_id= set()
-        self.id=id
+        self.unique_id = set()
+        self.id = id
         self.start_broadcast()
         self.start_listen_to_ephids()
         self.start_download_infected_sk()
@@ -41,8 +41,8 @@ class Client:
             self.add_key_to_file()
             eph_ids= self.generate_ephids(self.key)
             for eph_id in eph_ids:
-                 advertiser.start_advertising(1000, eph_id)
-                 time.sleep(random.uniform(4,6))
+                advertiser.start_advertising(1000, eph_id)
+                time.sleep(random.uniform(4, 6))
         
     def generate_key(self):
         #generate a crypthographically strong random secret key
@@ -55,7 +55,7 @@ class Client:
     
     def generate_ephids(self,key):
         #randomize order#
-        eph_ids=[]
+        eph_ids = []
         hashed_key= hmac.new(key, digestmod='sha256')
         for i in range(0, 24):
             #use hmac to generate ids #
@@ -68,7 +68,7 @@ class Client:
    
     def start_listen_to_ephids(self):
         """starting the thread that listen to other devices"""
-        bluetooth_scanner= BluetoothLeScanner(self.receive_ephid)
+        bluetooth_scanner = BluetoothLeScanner(self.receive_ephid)
   
     def receive_ephid(self, ephid):
         with open(f'Heard_EphIds{self.id}.txt', 'a') as file:
@@ -85,11 +85,11 @@ class Client:
     def download_infected_thread(self):
         while True:
             #read from the health care database#
-            with open('../../healthCareDataBase.txt','r') as file:
+            with open('healthCareDataBase.txt', 'r') as file:
                 sk_infected_list= file.readlines()
                 #create ephIds#
                 for sk in sk_infected_list:
-                    infected_ephids= self.generate_ephids(bytearray.fromhex(sk))
+                    infected_ephids= self.generate_ephids(bytearray.fromhex(sk.strip()))
                     for infected_ephid in infected_ephids:
                         #check if there is a match#
                         if infected_ephid in self.unique_id:
@@ -97,27 +97,5 @@ class Client:
                             print("Please isolate yourself and check if you are a carrier")
                             return
             time.sleep(120)
-                
-
 
 client = Client(sys.argv[1])
-
-
-
-
-
-
-"""
-def receive(data):
-    print(f'Received: {data}')
-
-
-
-
-# Create a scanner
-scanner = BluetoothLeScanner(receive)
-
-# Loop forever
-while True:
-    time.sleep(1)
-"""

@@ -63,7 +63,7 @@ class BluetoothLeAdvertiser:
     def start_advertising(self, interval=1000, periodic_data=b''):
         """The device will start advertising data at a set interval"""
 
-        print(f'Broadcasting EphIds: {periodic_data.hex()}')
+        print(f'Broadcasting EphId: {periodic_data.hex()}')
 
         self.interval = interval
         self.periodic_data = periodic_data

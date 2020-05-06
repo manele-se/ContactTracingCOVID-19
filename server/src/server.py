@@ -4,6 +4,7 @@
 import json
 import random
 import socket
+import sys
 import threading
 import time
 import tornado.ioloop
@@ -26,8 +27,9 @@ class Server:
     """Acts as intermediary for UDP packets, simulating Bluetooth LE between devices that are close
        enough to each other."""
 
-    def __init__(self, udp_ip='127.0.0.1', udp_port=50000):
+    def __init__(self, wwwroot_path='wwwroot', udp_ip='127.0.0.1', udp_port=50000):
         """Creates and starts the simulation server"""
+        self.wwwroot_path = wwwroot_path
         self.udp_ip = udp_ip
         self.udp_port = udp_port
 
@@ -46,7 +48,7 @@ class Server:
         self.web_socket_handlers = set()
         tornado_app = tornado.web.Application([
             (r'/ws', WebSocketHandler),
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': './wwwroot', 'default_filename': 'index.html'})
+            (r'/(.*)', tornado.web.StaticFileHandler, {'path': self.wwwroot_path, 'default_filename': 'index.html'})
         ])
         tornado_app.listen(WWW_PORT)
         self.ioloop = tornado.ioloop.IOLoop.instance()
@@ -200,7 +202,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
 
-server = Server()
+wwwroot_path = sys.argv[1]
+server = Server(wwwroot_path=wwwroot_path)
 
 while True:
     time.sleep(1.0)
