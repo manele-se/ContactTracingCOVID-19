@@ -155,6 +155,10 @@ class Server:
             device.still = True
             if device.is_in_hospital():
                 self.upload_sk(name)
+                # Send changes to WebSocket clients
+                for ws_handler in self.web_socket_handlers:
+                    ws_handler.send_device_in_hospital(name)
+                    
     
     def upload_sk(self,name):
         with open(f'Sk{name}.txt', 'r') as input:
@@ -163,6 +167,7 @@ class Server:
             #take just the last 14 sk
             for sk in all_sk[-14:]:
                 output.write(sk)
+                
                 
 
     def stop_moving_device(self, name):
@@ -255,6 +260,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         """Send information to the client about a device removal"""
         json_data = json.dumps({
             'action': 'remove',
+            'name': name
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+    
+    def send_device_in_hospital(self, name):
+        """Send information to the client about a device changing color"""
+        json_data = json.dumps({
+            'action': 'change_color_red',
             'name': name
         })
 
