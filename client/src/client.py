@@ -8,7 +8,9 @@ import sys
 import hmac
 import hashlib
 import urllib.request
+import source.timeframework
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
+from source import timeframework
 
 class Client: 
     """ This class represents a device which broadcasts Ephemerals ID (EphIDs) to other devices nearby 
@@ -51,7 +53,7 @@ class Client:
         if self.key is None:
             self.key = secrets.token_bytes(16)
             self.key0=self.key
-            self.key0_time= time.time()/720
+            self.key0_time= timeframework.ge_today_index()
         else:
             self.key= get_next_key(self.key)
     
@@ -103,7 +105,7 @@ class Client:
                     time =  sk_and_time.split(',')[1]
                     time = int(time.strip())
                     #loop from time of sk to today in simulated world
-                    for t in range(time, time.time()/720/86400):
+                    for t in range(time, timeframework.ge_today_index()):
                         infected_ephids= self.generate_ephids(sk)
                         sk = get_next_key(sk)
                         for infected_ephid in infected_ephids:

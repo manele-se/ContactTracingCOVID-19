@@ -10,6 +10,7 @@ import time
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+from doctor import Doctor
 from device import Device
 
 # Maximum number of bytes sent
@@ -46,7 +47,10 @@ class Server:
         # Start the UDP server thread for simulating bluetooth
         self.bluetooth_thread = threading.Thread(name='bluetooth', target=self.bluetooth_thread_function, daemon=True)
         self.bluetooth_thread.start()
-
+        
+         #create a doctor
+        self.doctor = Doctor(self)
+        
         # Start the web server, hosting the Google Maps frontend
         WebSocketHandler.server = self
         MoveRequestHandler.server = self
@@ -59,10 +63,12 @@ class Server:
             (r'/(.*)', tornado.web.StaticFileHandler, {'path': self.wwwroot_path, 'default_filename': 'index.html'})
             
         ])
-      
+
         tornado_app.listen(WWW_PORT)
         self.ioloop = tornado.ioloop.IOLoop.instance()
         self.ioloop.start()
+        
+       
 
     def zombie_thread_function(self):
         """The thread cleaning up zombie devices"""
@@ -87,13 +93,13 @@ class Server:
         """The thread running the UDP server"""
 
         # Start a UDP socket and listen for incoming packets
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((self.udp_ip, self.udp_port))
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((self.udp_ip, self.udp_port))
 
         # Loop forever
         while True:
             # Wait for one UDP datagram to arrive
-            data, addr = sock.recvfrom(UDP_PACKET_SIZE)
+            data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
             self.handle_incoming_broadcast(sock, data, addr)
 
     def handle_incoming_broadcast(self, sock, datagram, sender_addr):
@@ -126,12 +132,22 @@ class Server:
             if distance < threshold:
                 # If signal is strong enough, relay the packet to the receiver
                 print(f'Relaying from {sender.name} to {receiver.name}')
-                sock.sendto(data, receiver.addr)
-
+                self.send_info_to_client(receiver.name, {
+                    'data_type': 'bluetooth',
+                    'information': data.hex()
+                })
                 # Send receive event to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
 
+    def send_info_to_client(self, name, info):
+        info_str= json.dumps(info) 
+        #convert i byte with encoding
+        info_bytes = info_str.encode('utf-8')
+        #pick the address of a device
+        addr= self.devices_by_name[name].addr
+        self.sock.sendto(info_bytes, addr)
+        
     def get_of_create_device(self, sender_addr, sender_name):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
 
@@ -158,7 +174,7 @@ class Server:
             self.device_tick_callback(name, lat, lng, device.bearing)
             device.still = True
             if device.is_in_hospital():
-                self.upload_sk(name)
+                self.doctor.communicate_test_result(name)
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_in_hospital(name)
@@ -187,6 +203,10 @@ class Server:
         # Send movement to WebSocket clients
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_device_moved(name, lat, lng, bearing)
+    
+    def send_action_to_client(self, action, data):
+        """send a message to client"""
+        
 
 class MoveRequestHandler(tornado.web.RequestHandler):
     """Http handler for move commands performed in the web user interface"""
@@ -276,7 +296,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
     
     def send_device_in_hospital(self, name):
-        """Send information to the client about a device changing color"""
+        """Send information to the browser about a device changing color"""
         json_data = json.dumps({
             'action': 'change_color_red',
             'name': name

@@ -32,13 +32,26 @@ class UdpClient:
         while True:
             # Wait for an incoming UDP datagram
             data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
-            if self.scanner:
-                self.scanner.receive(data)
+            self.receive_data(data)
 
     def send(self, data):
         """Sends one UDP datagram to the simulation server"""
         self.sock.sendto(data, (UDP_SERVER_IP, UDP_SERVER_PORT))
 
+    def receive_data(self,datagram):
+        json_str=datagram.decode('utf-8')
+        info= json.loads(json_str)
+        #pick out the type of data received from json
+        data_type= info['data_type']
+        if data_type == 'bluetooth':
+           information= info['information']
+           if self.scanner:
+                self.scanner.receive(bytearray.fromhex(information))
+        elif data_type == 'action':
+            action = info['action']
+            time= info['time']
+            #connect client and udp client        
+        
 client = UdpClient()
 
 class BluetoothLeScanner:
