@@ -163,15 +163,7 @@ class Server:
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_in_hospital(name)
                     
-    
-    def upload_sk(self,name):
-        with open(f'Sk{name}.txt', 'r') as input:
-            all_sk= input.readlines()
-        with open('healthCareDataBase.txt', 'a') as output:
-            #take just the last 14 sk
-            for sk in all_sk[-14:]:
-                output.write(sk)
-                
+
                 
 
     def stop_moving_device(self, name):

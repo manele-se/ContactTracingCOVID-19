@@ -6,6 +6,7 @@ import threading
 import secrets
 import sys
 import hmac
+import hashlib
 import urllib.request
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
 
@@ -46,19 +47,25 @@ class Client:
                 time.sleep(random.uniform(4, 6))
         
     def generate_key(self):
-        #generate a crypthographically strong random secret key
-        self.key = secrets.token_bytes(32)
+        #generate a crypthographically strong random secret key using SHA256
+        if self.key is None:
+            self.key = secrets.token_bytes(16)
+            self.key0=self.key
+            self.key0_time= time.time()/720
+        else:
+            self.key= get_next_key(self.key)
     
-    def add_key_to_file(self):
-        with open(f'Sk{self.name}.txt', 'a') as file:
-            file.write(self.key.hex())
-            file.write('\n')
+    def get_next_key (self, key):
+        sha = hashlib.sha256()
+        sha.update(key)
+        return sha.digest()
     
+            
     def generate_ephids(self,key):
         #randomize order#
         eph_ids = []
         hashed_key= hmac.new(key, digestmod='sha256')
-        for i in range(0, 24):
+        for i in range(0, 24*4):
             #use hmac to generate ids #
             hashed_key.update(bytearray([i]))
             eph_id=hashed_key.digest()
@@ -83,23 +90,41 @@ class Client:
         self.download_thread.start()
    
     def download_infected_thread(self):
-        """ download the list with the sk of those pepole who have been declared infected"""
+        """ download the list with the sks (for the first infected day) of those pepole who have been declared infected"""
         while True:
             #read from the health care database#
             with open('healthCareDataBase.txt', 'r') as file:
                 sk_infected_list= file.readlines()
+
                 #create ephIds#
-                for sk in sk_infected_list:
-                    infected_ephids= self.generate_ephids(bytearray.fromhex(sk.strip()))
-                    for infected_ephid in infected_ephids:
-                        #check if there is a match#
-                        if infected_ephid in self.unique_id:
-                            #do it bigger and red
-                            print("Warning. You have been in contact with a carrier of COVID-19.")
-                            print("Please isolate yourself and check if you are a carrier")
-                            #communicate with the simutation framework
-                            urllib.request.urlopen(f'http://localhost:8008/warning?name={self.name}')
-                            return
+                for sk_and_time in sk_infected_list:
+                    sk = sk_and_time.split(',')[0]
+                    sk = bytearray.fromhex(sk)
+                    time =  sk_and_time.split(',')[1]
+                    time = int(time.strip())
+                    #loop from time of sk to today in simulated world
+                    for t in range(time, time.time()/720/86400):
+                        infected_ephids= self.generate_ephids(sk)
+                        sk = get_next_key(sk)
+                        for infected_ephid in infected_ephids:
+                            #check if there is a match#
+                            if infected_ephid in self.unique_id:
+                                #do it bigger and red
+                                print("Warning. You have been in contact with a carrier of COVID-19.")
+                                print("Please isolate yourself and check if you are a carrier")
+                                #communicate with the simutation framework
+                                urllib.request.urlopen(f'http://localhost:8008/warning?name={self.name}')
+                                return
             time.sleep(20)
+            
+        
+    def upload_key_and_time(self,time):
+        with open(f'Sk{name}.txt', 'r') as input:
+            all_sk= input.readlines()
+        with open('healthCareDataBase.txt', 'a') as output:
+            #take just the last 14 sk
+            for sk in all_sk[-14:]:
+                output.write(sk)
+                
 
 client = Client(sys.argv[1])
