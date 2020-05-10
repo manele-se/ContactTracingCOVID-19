@@ -100,7 +100,7 @@ class Server:
         while True:
             # Wait for one UDP datagram to arrive
             data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
-            self.handle_incoming_broadcast(sock, data, addr)
+            self.handle_incoming_broadcast(self.sock, data, addr)
 
     def handle_incoming_broadcast(self, sock, datagram, sender_addr):
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
@@ -141,11 +141,11 @@ class Server:
                     ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
 
     def send_info_to_client(self, name, info):
-        info_str= json.dumps(info) 
+        info_str = json.dumps(info) 
         #convert i byte with encoding
         info_bytes = info_str.encode('utf-8')
         #pick the address of a device
-        addr= self.devices_by_name[name].addr
+        addr = self.devices_by_name[name].addr
         self.sock.sendto(info_bytes, addr)
         
     def get_of_create_device(self, sender_addr, sender_name):

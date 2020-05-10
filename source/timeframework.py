@@ -9,6 +9,6 @@ TIME_SPEED= 720
 SECONDS_PAR_DAY=24*60*60
 
 
-def get_today_index(self):
-    return int(time.time()/TIME_SPEED/SECONDS_PAR_DAY)
+def get_today_index():
+    return int(time.time() / TIME_SPEED / SECONDS_PAR_DAY)
     

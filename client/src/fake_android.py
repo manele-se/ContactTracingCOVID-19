@@ -19,6 +19,7 @@ class UdpClient:
     """UDP client for communicating with the simulation server"""
     def __init__(self):
         self.scanner = None
+        self.actor = None
 
         # Create a socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -46,20 +47,22 @@ class UdpClient:
         if data_type == 'bluetooth':
            information= info['information']
            if self.scanner:
-                self.scanner.receive(bytearray.fromhex(information))
+                self.scanner.receive(bytes(bytearray.fromhex(information)))
         elif data_type == 'action':
-            action = info['action']
-            time= info['time']
-            #connect client and udp client        
+            if self.actor:
+                action = info['action']
+                if action == 'upload':
+                    time = info['time']
+                    self.actor.upload_key_and_time(time)
         
-client = UdpClient()
+udp_client = UdpClient()
 
 class BluetoothLeScanner:
     """Minimal simulation of the BluetoothLeScanner class in the Android SDK"""
 
     def __init__(self, callback):
         self.callback = callback
-        client.scanner = self
+        udp_client.scanner = self
 
     def receive(self, data):
         """This method gets called when BLE data is received"""
@@ -107,4 +110,4 @@ class BluetoothLeAdvertiser:
             }
             message_json = json.dumps(message_object)
             datagram = message_json.encode('utf-8')
-            client.send(datagram)
+            udp_client.send(datagram)

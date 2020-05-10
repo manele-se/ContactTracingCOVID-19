@@ -9,7 +9,7 @@ import hmac
 import hashlib
 import urllib.request
 import source.timeframework
-from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner
+from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner, udp_client
 from source import timeframework
 
 class Client: 
@@ -22,11 +22,12 @@ class Client:
     def __init__(self, name):
         #an empty set#
         self.unique_id = set()
+        self.key0 = None
         self.name = name
         self.start_broadcast()
         self.start_listen_to_ephids()
         self.start_download_infected_sk()
-    
+        udp_client.actor = self
  
     def start_broadcast(self):
         """starting the broadcast thread"""
@@ -42,7 +43,6 @@ class Client:
         advertiser = BluetoothLeAdvertiser(self.name)
         while True:
             self.generate_key()
-            self.add_key_to_file()
             eph_ids= self.generate_ephids(self.key)
             for eph_id in eph_ids:
                 advertiser.start_advertising(1000, eph_id)
@@ -50,29 +50,28 @@ class Client:
         
     def generate_key(self):
         #generate a crypthographically strong random secret key using SHA256
-        if self.key is None:
-            self.key = secrets.token_bytes(16)
-            self.key0=self.key
-            self.key0_time= timeframework.ge_today_index()
+        if self.key0 is None:
+            self.key0 = secrets.token_bytes(16)
+            self.key0_time = timeframework.get_today_index()
+            self.key = self.key0
         else:
             self.key= get_next_key(self.key)
     
-    def get_next_key (self, key):
+    def get_next_key(self, key):
         sha = hashlib.sha256()
         sha.update(key)
         return sha.digest()
     
-            
-    def generate_ephids(self,key):
+    def generate_ephids(self, key):
         #randomize order#
         eph_ids = []
         hashed_key= hmac.new(key, digestmod='sha256')
-        for i in range(0, 24*4):
+        for i in range(0, 24 * 4):
             #use hmac to generate ids #
             hashed_key.update(bytearray([i]))
             eph_id=hashed_key.digest()
             eph_ids.append(eph_id)
-        #shuffle the ids#s
+        #shuffle the ids#
         random.shuffle(eph_ids)
         return eph_ids
    
@@ -102,12 +101,12 @@ class Client:
                 for sk_and_time in sk_infected_list:
                     sk = sk_and_time.split(',')[0]
                     sk = bytearray.fromhex(sk)
-                    time =  sk_and_time.split(',')[1]
-                    time = int(time.strip())
+                    timestamp =  sk_and_time.split(',')[1]
+                    timestamp = int(timestamp.strip())
                     #loop from time of sk to today in simulated world
-                    for t in range(time, timeframework.ge_today_index()):
+                    for t in range(timestamp, timeframework.get_today_index()):
                         infected_ephids= self.generate_ephids(sk)
-                        sk = get_next_key(sk)
+                        sk = self.get_next_key(sk)
                         for infected_ephid in infected_ephids:
                             #check if there is a match#
                             if infected_ephid in self.unique_id:
@@ -118,15 +117,16 @@ class Client:
                                 urllib.request.urlopen(f'http://localhost:8008/warning?name={self.name}')
                                 return
             time.sleep(20)
-            
-        
+    
     def upload_key_and_time(self,time):
-        with open(f'Sk{name}.txt', 'r') as input:
-            all_sk= input.readlines()
+        """it takes the first day of being contagious and it create its Sk for that day and 
+           and uploads its Sk and timestamp"""
+        sk = self.key0
+        for k in range(self.key0_time, time):
+            sk = self.get_next_key(sk)
         with open('healthCareDataBase.txt', 'a') as output:
-            #take just the last 14 sk
-            for sk in all_sk[-14:]:
-                output.write(sk)
-                
+            output.write(f'{sk.hex()} , {time}\n')
+            
+         
 
 client = Client(sys.argv[1])
