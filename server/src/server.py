@@ -181,7 +181,11 @@ class Server:
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_in_hospital(name)
-                    
+            elif device.state== State.INFECTED:
+                device.state=State.HEALTHY
+                # Send changes to WebSocket clients
+                for ws_handler in self.web_socket_handlers:
+                    ws_handler.send_device_healthy(name)        
 
                 
 
@@ -325,6 +329,19 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
 
+
+    def send_device_healthy(self, name):
+        """Send information to the client about a device changing color"""
+        json_data = json.dumps({
+            'action': 'change_color_green',
+            'name': name
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        
+        
     def send_device_broadcast(self, name, lat, lng):
         """Send information to the client about a device broadcast"""
         json_data = json.dumps({

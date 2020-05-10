@@ -133,6 +133,8 @@ class Client:
             sk = self.get_next_key(sk)
         with open('healthCareDataBase.txt', 'a') as output:
             output.write(f'{sk.hex()} , {time}\n')
+        #create a new key0 next day
+        self.key0= None;
 
 argument = sys.argv[1]
 if argument.isnumeric():
