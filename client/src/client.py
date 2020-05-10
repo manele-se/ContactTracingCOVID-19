@@ -29,6 +29,7 @@ class Client:
         self.start_broadcast()
         self.start_listen_to_ephids()
         self.start_download_infected_sk()
+        self.infected= False
        
         udp_client.actor = self
  
@@ -138,6 +139,7 @@ if argument.isnumeric():
     #A number was passed in. Start this many clients#
     number_of_clients = int(argument)
     for i in range(0, number_of_clients):
+        real_time.sleep(random.uniform(0.05, 0.25))
         client = Client(f'Client{i}',  UdpClient())
 else:
     #A string was passed in. Start one client with this name#

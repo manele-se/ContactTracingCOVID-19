@@ -2,6 +2,10 @@
 # Requires tmux
 # Install tmux on Mac:
 # brew install tmux
+
+rm healthCareDataBase.txt
+touch healthCareDataBase.txt
+
 export PYTHONPATH=./:./server/src/
 tmux new-session -d 'python3 server/src/server.py server/src/wwwroot'
 

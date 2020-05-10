@@ -11,7 +11,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 from doctor import Doctor
-from device import Device
+from device import Device, State
 
 # Maximum number of bytes sent
 UDP_PACKET_SIZE = 1024
@@ -75,7 +75,7 @@ class Server:
 
         # Loop forever
         while True:
-            real_time.sleep(1)
+            real_time.sleep(0.5)
             now = real_time.time()
             threshold = now - ZOMBIE_MAX_AGE
             # Get all zombies
@@ -113,6 +113,8 @@ class Server:
         # Get the Device instance for this address, or create a new one if this is a new address
         sender = self.get_of_create_device(sender_addr, sender_name)
         sender.last_action = real_time.time()
+        if sender.state == State.INFECTED:
+            return
 
         # Send broadcast to WebSocket clients
         for ws_handler in self.web_socket_handlers:
@@ -174,6 +176,7 @@ class Server:
             self.device_tick_callback(name, lat, lng, device.bearing)
             device.still = True
             if device.is_in_hospital():
+                device.state = State.INFECTED
                 self.doctor.communicate_test_result(name)
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
@@ -194,9 +197,6 @@ class Server:
             device = self.devices_by_name[name]
             device.still = not device.still
 
-    def tick(self, seconds_passed):
-        pass
-
     def device_tick_callback(self, name, lat, lng, bearing):
         """This callback is called when a device moves"""
 
@@ -206,6 +206,9 @@ class Server:
     
     def send_action_to_client(self, action, data):
         """send a message to client"""
+
+    def tick(self, seconds_passed):
+        pass
         
 
 class MoveRequestHandler(tornado.web.RequestHandler):
@@ -224,11 +227,16 @@ class MoveRequestHandler(tornado.web.RequestHandler):
             device.still = not device.still
 
 class WarningRequestHandler(tornado.web.RequestHandler):
-    """Http handler for warning commands performed in the web user interface"""
+    """Http handler for warning commands sent from the client"""
     server = None
 
     def get(self):
         device_name = self.get_argument('name')
+        #if infected do not send to the client to change
+        device = WarningRequestHandler.server.devices_by_name[device_name]
+        if device.state == State.INFECTED:
+            return
+     
         # Send changes to WebSocket clients
         for ws_handler in WarningRequestHandler.server.web_socket_handlers:
             ws_handler.send_warning_to_device(device_name)
