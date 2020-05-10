@@ -1,7 +1,8 @@
 
 import random
 import threading
-import time
+import time as real_time
+from enum import Enum
 
 from latlng import distance, move, bearing, geofence, avoid_circle
 
@@ -24,6 +25,12 @@ MAX_SPEED = 2
 MIN_ROTATION_SPEED = -5
 MAX_ROTATION_SPEED = 5
 
+class State(Enum):
+    HEALTHY = 1
+    WARNED = 2
+    INFECTED = 3
+  
+
 class Device:
     """Representation of a virtual Bluetooth-simulating device,
        with a lat/lng position in a virtual world, that moves
@@ -40,9 +47,11 @@ class Device:
         # Give the device an internal name and store the UDP address
         self.name = name
         self.addr = addr
+        
+        self.state = State.HEALTHY
 
         # Keep track of last action
-        self.last_action = time.time()
+        self.last_action = real_time.time()
         self.zombie = False
 
         # Start a thread that makes the device move around
@@ -50,8 +59,8 @@ class Device:
         self.thread.start()
         self.tick_callback = None
 
-        # Start without movement
-        self.still = True
+        # Start with movement
+        self.still = False
 
         # Increment the ID for the next device
         Device.next_id += 1
@@ -63,7 +72,7 @@ class Device:
         while not self.zombie:
             # Sleep a random amount of time and move some distance
             time_to_sleep = random.uniform(0.2, 0.4)
-            time.sleep(time_to_sleep)
+            real_time.sleep(time_to_sleep)
             if not self.still:
                 self.tick(time_to_sleep)
 

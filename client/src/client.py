@@ -1,7 +1,8 @@
 
 import os
 import random
-import time
+from source import timeframework as time
+import time as real_time
 import threading
 import secrets
 import sys
@@ -9,7 +10,7 @@ import hmac
 import hashlib
 import urllib.request
 import source.timeframework
-from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner, udp_client
+from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner, UdpClient
 from source import timeframework
 
 class Client: 
@@ -19,14 +20,16 @@ class Client:
         the third with the declared infected Sks. 
         The device receives EphIDs over a simulated Bluetooth connection"""
     
-    def __init__(self, name):
+    def __init__(self, name, udp_client):
         #an empty set#
+        self.udp_client= udp_client
         self.unique_id = set()
         self.key0 = None
         self.name = name
         self.start_broadcast()
         self.start_listen_to_ephids()
         self.start_download_infected_sk()
+       
         udp_client.actor = self
  
     def start_broadcast(self):
@@ -36,18 +39,18 @@ class Client:
     
      #thread#
     def broadcasting_ids_thread(self):
-        #send out the EphIDs, every 5 sec send a new. 
+        #send out the EphIDs, every 15 minutes pick a new one. 
         #every two minutes creates a new SK
         
         # Create an advertiser
-        advertiser = BluetoothLeAdvertiser(self.name)
+        advertiser = BluetoothLeAdvertiser(self.name, self.udp_client)
         while True:
             self.generate_key()
             eph_ids= self.generate_ephids(self.key)
             for eph_id in eph_ids:
                 advertiser.start_advertising(1000, eph_id)
-                time.sleep(random.uniform(4, 6))
-        
+                time.task_sleep(15 * 60)
+    
     def generate_key(self):
         #generate a crypthographically strong random secret key using SHA256
         if self.key0 is None:
@@ -55,7 +58,7 @@ class Client:
             self.key0_time = timeframework.get_today_index()
             self.key = self.key0
         else:
-            self.key= get_next_key(self.key)
+            self.key= self.get_next_key(self.key)
     
     def get_next_key(self, key):
         sha = hashlib.sha256()
@@ -77,7 +80,7 @@ class Client:
    
     def start_listen_to_ephids(self):
         """starting the thread that listen to other devices"""
-        bluetooth_scanner = BluetoothLeScanner(self.receive_ephid)
+        bluetooth_scanner = BluetoothLeScanner(self.receive_ephid, self.udp_client)
   
     def receive_ephid(self, ephid):
         with open(f'Heard_EphIds{self.name}.txt', 'a') as file:
@@ -115,8 +118,11 @@ class Client:
                                 print("Please isolate yourself and check if you are a carrier")
                                 #communicate with the simutation framework
                                 urllib.request.urlopen(f'http://localhost:8008/warning?name={self.name}')
+                                #remove infected ephids from heard ids#
+                                self.unique_id = self.unique_id - set(infected_ephids)
                                 return
-            time.sleep(20)
+            # Do this every 4 hours
+            time.task_sleep(4 * 60 * 60)
     
     def upload_key_and_time(self,time):
         """it takes the first day of being contagious and it create its Sk for that day and 
@@ -126,7 +132,13 @@ class Client:
             sk = self.get_next_key(sk)
         with open('healthCareDataBase.txt', 'a') as output:
             output.write(f'{sk.hex()} , {time}\n')
-            
-         
 
-client = Client(sys.argv[1])
+argument = sys.argv[1]
+if argument.isnumeric():
+    #A number was passed in. Start this many clients#
+    number_of_clients = int(argument)
+    for i in range(0, number_of_clients):
+        client = Client(f'Client{i}',  UdpClient())
+else:
+    #A string was passed in. Start one client with this name#
+    client = Client(argument, UdpClient())

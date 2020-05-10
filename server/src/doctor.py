@@ -1,5 +1,5 @@
 import random
-from source import timeframework
+from source import timeframework as time
 
 class Doctor:
   
@@ -9,7 +9,7 @@ class Doctor:
     def compute_contagius_window(self):
         """compute number of days from today and add 2 extra days"""
         nr_days= 2 + random.randrange(14)
-        return timeframework.get_today_index() - nr_days
+        return time.get_today_index() - nr_days
       
     def communicate_test_result(self, name):
         """tell the client to upload sk"""

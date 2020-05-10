@@ -55,12 +55,12 @@ class UdpClient:
                     time = info['time']
                     self.actor.upload_key_and_time(time)
         
-udp_client = UdpClient()
+
 
 class BluetoothLeScanner:
     """Minimal simulation of the BluetoothLeScanner class in the Android SDK"""
 
-    def __init__(self, callback):
+    def __init__(self, callback, udp_client):
         self.callback = callback
         udp_client.scanner = self
 
@@ -72,12 +72,13 @@ class BluetoothLeScanner:
 class BluetoothLeAdvertiser:
     """Minimal simulation of the BluetoothLeAdvertiser class in the Android SDK"""
 
-    def __init__(self, client_name):
+    def __init__(self, client_name, udp_client):
         self.thread = None
         self.stopping = False
         self.interval = 1000
         self.periodic_data = b''
         self.client_name = client_name
+        self.udp_client = udp_client
 
     def start_advertising(self, interval=1000, periodic_data=b''):
         """The device will start advertising data at a set interval"""
@@ -110,4 +111,4 @@ class BluetoothLeAdvertiser:
             }
             message_json = json.dumps(message_object)
             datagram = message_json.encode('utf-8')
-            udp_client.send(datagram)
+            self.udp_client.send(datagram)

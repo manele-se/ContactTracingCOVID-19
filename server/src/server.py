@@ -6,7 +6,7 @@ import random
 import socket
 import sys
 import threading
-import time
+import time as real_time
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
@@ -75,8 +75,8 @@ class Server:
 
         # Loop forever
         while True:
-            time.sleep(1)
-            now = time.time()
+            real_time.sleep(1)
+            now = real_time.time()
             threshold = now - ZOMBIE_MAX_AGE
             # Get all zombies
             zombies = list(filter(lambda d: d.last_action < threshold, self.devices_by_name.values()))
@@ -112,7 +112,7 @@ class Server:
 
         # Get the Device instance for this address, or create a new one if this is a new address
         sender = self.get_of_create_device(sender_addr, sender_name)
-        sender.last_action = time.time()
+        sender.last_action = real_time.time()
 
         # Send broadcast to WebSocket clients
         for ws_handler in self.web_socket_handlers:
@@ -347,5 +347,5 @@ wwwroot_path = sys.argv[1]
 server = Server(wwwroot_path=wwwroot_path)
 
 while True:
-    time.sleep(1.0)
+    real_time.sleep(1.0)
     server.tick(1.0)
