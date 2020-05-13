@@ -112,9 +112,8 @@ class Client:
                         infected_ephids= self.generate_ephids(sk)
                         sk = self.get_next_key(sk)
                         for infected_ephid in infected_ephids:
-                            #check if there is a match#
+                            #check if there is a match , maybe put this in its own method....
                             if infected_ephid in self.unique_id:
-                                #do it bigger and red
                                 print("Warning. You have been in contact with a carrier of COVID-19.")
                                 print("Please isolate yourself and check if you are a carrier")
                                 #communicate with the simutation framework
