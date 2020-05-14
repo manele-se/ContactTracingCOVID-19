@@ -62,7 +62,11 @@
             } else {
                 // The name is on the format "device-N". Get the "N" part and use it as a label.
                 const label = name.substr(0, 1);
+                let link = "http://maps.google.com/mapfiles/kml/paddle/grn-blank.png"
 
+                if (name.startsWith('Mallory')) {
+                    link = "http://maps.google.com/mapfiles/kml/paddle/purple-blank.png"
+                }
                 // Create a new marker on the map
                 const newDevice = new google.maps.Marker({
                     position: new google.maps.LatLng(CENTER_LAT, CENTER_LNG),
@@ -71,16 +75,7 @@
                     draggable: true,
                     clickable: true,
                     icon: {
-                        url: "http://maps.google.com/mapfiles/kml/paddle/grn-blank.png"
-
-                        //for yellow one: person which receive the notification: 
-                        //"http://maps.google.com/mapfiles/kml/paddle/ylw-blank.png"
-
-                        //for the declared infected, red
-                        //"http://maps.google.com/mapfiles/kml/paddle/red-blank.png"
-
-                        //icon for hospital
-                        //create one
+                        url: link
                     }
                 });
 
@@ -206,6 +201,11 @@
                     case 'change_color_green':
                         //change color to red to the sick marker
                         device.setIcon('http://maps.google.com/mapfiles/kml/paddle/grn-blank.png');
+                        break;
+
+                    case 'change_color_purple':
+                        //change color to red to the sick marker
+                        device.setIcon('http://maps.google.com/mapfiles/kml/paddle/purple-blank.png');
                         break;
 
                     case 'receive':

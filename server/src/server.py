@@ -111,7 +111,7 @@ class Server:
         data = bytearray.fromhex(message_object['data'])
 
         # Get the Device instance for this address, or create a new one if this is a new address
-        sender = self.get_of_create_device(sender_addr, sender_name)
+        sender = self.get_or_create_device(sender_addr, sender_name)
         sender.last_action = real_time.time()
         if sender.state == State.INFECTED:
             return
@@ -150,7 +150,7 @@ class Server:
         addr = self.devices_by_name[name].addr
         self.sock.sendto(info_bytes, addr)
         
-    def get_of_create_device(self, sender_addr, sender_name):
+    def get_or_create_device(self, sender_addr, sender_name):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
 
         # Check if the sender's address is already known or not
@@ -340,7 +340,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # For thread safety, this message must be sent on the event loop thread
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
-        
+    
+    def send_device_malicious(self, name):
+        """Send information to the client about a device changing color"""
+        json_data = json.dumps({
+            'action': 'change_color_purple',
+            'name': name
+        })
+
+        # For thread safety, this message must be sent on the event loop thread
+        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
+        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)    
         
     def send_device_broadcast(self, name, lat, lng):
         """Send information to the client about a device broadcast"""

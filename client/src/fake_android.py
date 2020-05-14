@@ -86,6 +86,7 @@ class BluetoothLeAdvertiser:
         # print(f'Broadcasting EphId: {periodic_data.hex()}')
 
         self.periodic_data = periodic_data
+        self.interval = interval
 
         if self.thread is None:
             self.thread = threading.Thread(target=self.thread_function, daemon=True)
