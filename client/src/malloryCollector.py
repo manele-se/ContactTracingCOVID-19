@@ -76,12 +76,12 @@ class MalloryBoss:
         self.udp_client= udp_client
         self.name = name
         self.start_download_infected_sk()
-     
+        self.handled_sk = set()
     
     def start_download_infected_sk(self):
         self.download_thread = threading.Thread(target=self.download_infected_thread)
         self.download_thread.start()
-   
+    
     def download_infected_thread(self):
         """ download the list with the sks (for the first infected day) of those pepole who have been declared infected"""
         while True:
@@ -94,6 +94,10 @@ class MalloryBoss:
                     location_trail = list()
                    
                     sk = sk_and_time.split(',')[0]
+                    if sk in self.handled_sk:
+                        continue
+                    else:
+                        self.handled_sk.add(sk)
                     sk = bytearray.fromhex(sk)
                     timestamp =  sk_and_time.split(',')[1]
                     timestamp = int(timestamp.strip())
@@ -106,13 +110,12 @@ class MalloryBoss:
                             if infected_ephid in stolen_pos:
                                 #loop over tuppels
                                 for (lat, lng, timestamp) in stolen_pos[infected_ephid]:
-                                   location_trail.append((lat,lng,timestamp))
+                                   location_trail.append((round(lat, 6), round(lng, 6), int(timestamp)))
                     #check if list is not empty, meaning that there is a match 
                     if location_trail:
-                    
                        #convert location_trail to json and ecode it into bytearray to send through udp
                        location_trail_json= json.dumps(location_trail)
-                       print(location_trail_json)
+                       # print(location_trail_json)
                        datagram = location_trail_json.encode('utf-8')
                        self.udp_client.send(datagram)
             # Do this every hour

@@ -14,7 +14,7 @@ from doctor import Doctor
 from device import Device, State
 
 # Maximum number of bytes sent
-UDP_PACKET_SIZE = 1024
+UDP_PACKET_SIZE = 65507
 
 # Signal strength of 10 meters away have a   0 % chance of arriving
 # Signal strength of  5 meters away have a 100 % chance of arriving
@@ -106,7 +106,14 @@ class Server:
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
 
         message_json = datagram.decode('utf-8')
-        message_object = json.loads(message_json)
+        
+        try:
+            message_object = json.loads(message_json)
+        except json.decoder.JSONDecodeError:
+            print('Error decoding json!')
+            print(message_json)
+            return
+
         if type(message_object) is list:
             self.show_location_trails(message_object)
         else:
@@ -149,6 +156,7 @@ class Server:
         #sort list by timestamp
         location_sorted = sorted(location, key= lambda item: item[2] )
         #Send receive event to WebSocket clients
+   
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_location_trail(location_sorted)
 
@@ -374,9 +382,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'location_trail',
             'trail': trail
         })
+        
         self.send_json(json_data)
     
-    def send_json(self, json):
+    def send_json(self, json_data):
         # For thread safety, this message must be sent on the event loop thread
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)

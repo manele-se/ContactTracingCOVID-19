@@ -139,7 +139,7 @@ function connectToWebSocket() {
     const { name, lat, lng, bearing, action, trail } = JSON.parse(evt.data);
 
     // Check if the device is known
-    const device = getOrCreateDeviceMarker(name);
+    const device = name && getOrCreateDeviceMarker(name);
 
     switch (action) {
       case 'move':
@@ -159,8 +159,19 @@ function connectToWebSocket() {
         showBroadcastCircle(lat, lng);
         break;
 
-      case 'show_location_trail':
-      //show the trail of infected
+      case 'location_trail':
+        //show the trail of infected
+        let coordinates = trail.map(([ lat, lng ]) => ({
+          lat: lat,
+          lng: lng
+        }));
+        let polyline = new google.maps.Polyline({
+          path: coordinates,
+          strokeColor: 'red',
+          strokeWeight: 10
+        });
+        polyline.setMap(map);
+        break;
 
       case 'change_color_red':
         //change color to red to the sick marker
