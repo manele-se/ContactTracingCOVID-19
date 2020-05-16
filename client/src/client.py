@@ -15,6 +15,9 @@ import source.timeframework
 from fake_android import BluetoothLeAdvertiser, BluetoothLeScanner, UdpClient
 from source import timeframework
 
+EPHIDS_SIZE = 16
+EPOCHS_PER_DAY = 24*4
+
 class Client: 
     """ This class represents a device which broadcasts Ephemerals ID (EphIDs) to other devices nearby 
         It includes 3 files: one with the devices Secrete Key (Sk) for the last 14 days
@@ -58,6 +61,7 @@ class Client:
         #generate a crypthographically strong random secret key using SHA256
         if self.key0 is None:
             self.key0 = secrets.token_bytes(16)
+            self.key0 = self.get_next_key(self.key0)
             self.key0_time = timeframework.get_today_index()
             self.key = self.key0
         else:
@@ -81,11 +85,11 @@ class Client:
         #create a pseudo number generator#
         cipher = AES.new(prf, AES.MODE_CTR, counter= counter)
         #generate all ephids for one day#
-        ephids_all = cipher.encrypt(bytes(16 * 24*4))
+        ephids_all = cipher.encrypt(bytes(EPHIDS_SIZE * EPOCHS_PER_DAY))
         #dived all ephids into chuncks#
         eph_ids = [
-            ephids_all[i:i+16]
-            for i in range (0, len(ephids_all), 16)
+            ephids_all[i:i+EPHIDS_SIZE]
+            for i in range (0, len(ephids_all), EPHIDS_SIZE)
         ]
         #shuffle the ids#
         random.shuffle(eph_ids)
