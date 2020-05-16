@@ -148,10 +148,9 @@ class Server:
     def show_location_trails(self,location):
         #sort list by timestamp
         location_sorted = sorted(location, key= lambda item: item[2] )
-        location_json= json.dumps(location_sorted)
         #Send receive event to WebSocket clients
         for ws_handler in self.web_socket_handlers:
-            ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
+            ws_handler.send_location_trail(location_sorted)
 
     def send_info_to_client(self, name, info):
         info_str = json.dumps(info) 
@@ -197,11 +196,6 @@ class Server:
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_healthy(name)        
-        
-       
-        
-
-                
 
     def stop_moving_device(self, name):
         """The device was grabbed. The person decided to stop moving."""
@@ -312,10 +306,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'lng': lng,
             'bearing': bearing
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        self.send_json(json_data)
 
     def send_device_removed(self, name):
         """Send information to the client about a device removal"""
@@ -323,10 +314,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'remove',
             'name': name
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        self.send_json(json_data)
     
     def send_device_in_hospital(self, name):
         """Send information to the browser about a device changing color"""
@@ -334,10 +322,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'change_color_red',
             'name': name
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        self.send_json(json_data)
         
     def send_warning_to_device(self, name):
         """Send information to the client about a device changing color"""
@@ -345,11 +330,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'change_color_yellow',
             'name': name
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
-
+        self.send_json(json_data)
 
     def send_device_healthy(self, name):
         """Send information to the client about a device changing color"""
@@ -357,10 +338,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'change_color_green',
             'name': name
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        self.send_json(json_data)
     
     def send_device_malicious(self, name):
         """Send information to the client about a device changing color"""
@@ -368,10 +346,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'action': 'change_color_purple',
             'name': name
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)    
+        self.send_json(json_data)
         
     def send_device_broadcast(self, name, lat, lng):
         """Send information to the client about a device broadcast"""
@@ -381,10 +356,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'lat': lat,
             'lng': lng
         })
-
-        # For thread safety, this message must be sent on the event loop thread
-        # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        self.send_json(json_data)
 
     def send_device_received(self, name, lat, lng):
         """Send information to the client about a device broadcast"""
@@ -394,7 +366,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'lat': lat,
             'lng': lng
         })
-
+        self.send_json(json_data)
+    
+    def send_location_trail(self, trail):
+        """Send information to the client about a location trail"""
+        json_data = json.dumps({
+            'action': 'location_trail',
+            'trail': trail
+        })
+        self.send_json(json_data)
+    
+    def send_json(self, json):
         # For thread safety, this message must be sent on the event loop thread
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
