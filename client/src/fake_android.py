@@ -20,6 +20,7 @@ class UdpClient:
     def __init__(self):
         self.scanner = None
         self.actor = None
+        self.location_manager = None
 
         # Create a socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -48,6 +49,13 @@ class UdpClient:
            information= info['information']
            if self.scanner:
                 self.scanner.receive(bytes(bytearray.fromhex(information)))
+                
+        elif data_type == 'location':
+           lat = info['lat']
+           lng = info ['lng']
+           if self.location_manager:
+                self.location_manager.receive(lat, lng)
+                
         elif data_type == 'action':
             if self.actor:
                 action = info['action']
@@ -103,9 +111,9 @@ class BluetoothLeAdvertiser:
 
     def thread_function(self):
         # As long as stop_advertising has not been called, loop forever
-        time.sleep(random.uniform(0, self.interval * 0.001))
+        time.sleep(random.uniform(0,1))
         while not self.stopping:
-            time.sleep(self.interval * 0.001)
+            
             message_object = {
                 'name' : self.client_name,
                 'data' : self.periodic_data.hex()
@@ -113,3 +121,17 @@ class BluetoothLeAdvertiser:
             message_json = json.dumps(message_object)
             datagram = message_json.encode('utf-8')
             self.udp_client.send(datagram)
+            time.sleep(self.interval * 0.001)
+
+class LocationManager: 
+    """ This class represents a gps """
+    
+    def __init__(self, udp_client, callback):
+        self.udp_client = udp_client
+        self.callback = callback
+        udp_client.location_manager = self
+        
+    def receive(self, lat, lng):
+        """This method gets called when gps data is received"""
+        if self.callback:
+           self.callback(lat, lng)

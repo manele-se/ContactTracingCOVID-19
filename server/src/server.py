@@ -79,7 +79,7 @@ class Server:
             now = real_time.time()
             threshold = now - ZOMBIE_MAX_AGE
             # Get all zombies
-            zombies = list(filter(lambda d: d.last_action < threshold, self.devices_by_name.values()))
+            zombies = list(filter(lambda d: d.last_action < threshold and not d.name.startswith('Mallory'), self.devices_by_name.values()))
             for zombie in zombies:
                 print(f'Deleting zombie {zombie.name}')
                 del self.devices_by_name[zombie.name]
@@ -107,40 +107,51 @@ class Server:
 
         message_json = datagram.decode('utf-8')
         message_object = json.loads(message_json)
-        sender_name = message_object['name']
-        data = bytearray.fromhex(message_object['data'])
+        if type(message_object) is list:
+            self.show_location_trails(message_object)
+        else:
+            sender_name = message_object['name']
+            data = bytearray.fromhex(message_object['data'])
 
-        # Get the Device instance for this address, or create a new one if this is a new address
-        sender = self.get_or_create_device(sender_addr, sender_name)
-        sender.last_action = real_time.time()
-        if sender.state == State.INFECTED:
-            return
+            # Get the Device instance for this address, or create a new one if this is a new address
+            sender = self.get_or_create_device(sender_addr, sender_name)
+            sender.last_action = real_time.time()
+            if sender.state == State.INFECTED:
+                return
 
-        # Send broadcast to WebSocket clients
+            # Send broadcast to WebSocket clients
+            for ws_handler in self.web_socket_handlers:
+                ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
+
+            # Use a random threshold to sort of simulate real-world conditions
+            threshold = random.uniform(MIN_DISTANCE, MAX_DISTANCE)
+
+            # Loop over all other devices
+            for receiver in self.devices_by_name.values():
+                if sender == receiver:
+                    continue
+
+                # Get the distance between sender and receiver
+                distance = sender.distance_to(receiver)
+
+                if distance < threshold:
+                    # If signal is strong enough, relay the packet to the receiver
+                    print(f'Relaying from {sender.name} to {receiver.name}')
+                    self.send_info_to_client(receiver.name, {
+                        'data_type': 'bluetooth',
+                        'information': data.hex()
+                    })
+                    # Send receive event to WebSocket clients
+                    for ws_handler in self.web_socket_handlers:
+                        ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
+                        
+    def show_location_trails(self,location):
+        #sort list by timestamp
+        location_sorted = sorted(location, key= lambda item: item[2] )
+        location_json= json.dumps(location_sorted)
+        #Send receive event to WebSocket clients
         for ws_handler in self.web_socket_handlers:
-            ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
-
-        # Use a random threshold to sort of simulate real-world conditions
-        threshold = random.uniform(MIN_DISTANCE, MAX_DISTANCE)
-
-        # Loop over all other devices
-        for receiver in self.devices_by_name.values():
-            if sender == receiver:
-                continue
-
-            # Get the distance between sender and receiver
-            distance = sender.distance_to(receiver)
-
-            if distance < threshold:
-                # If signal is strong enough, relay the packet to the receiver
-                print(f'Relaying from {sender.name} to {receiver.name}')
-                self.send_info_to_client(receiver.name, {
-                    'data_type': 'bluetooth',
-                    'information': data.hex()
-                })
-                # Send receive event to WebSocket clients
-                for ws_handler in self.web_socket_handlers:
-                    ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
+            ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
 
     def send_info_to_client(self, name, info):
         info_str = json.dumps(info) 
@@ -186,6 +197,9 @@ class Server:
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_healthy(name)        
+        
+       
+        
 
                 
 
@@ -207,6 +221,13 @@ class Server:
         # Send movement to WebSocket clients
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_device_moved(name, lat, lng, bearing)
+            
+         #send position to fake-gps
+        self.send_info_to_client(name, {
+                    'data_type': 'location',
+                    'lat': lat,
+                    'lng': lng
+                })
     
     def send_action_to_client(self, action, data):
         """send a message to client"""
