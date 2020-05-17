@@ -57,11 +57,12 @@ class MalloryCollector:
             return
         stolen_pos[ephid].append((self.lat, self.lng, time.time()))  
             
-            
     def start_listen_to_gps(self):
+        """subscribe to location updates from the device's gps"""
         self.location = LocationManager(self.udp_client, self.collect_location)
     
     def collect_location(self, lat, lng):
+        """when new location is known, store it"""
         self.lat = lat
         self.lng = lng
         

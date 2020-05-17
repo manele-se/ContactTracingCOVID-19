@@ -115,12 +115,12 @@ class App:
         self.download_thread.start()
 
     def download_infected_thread(self):
-        """ download the list with the sks (for the first infected day) of those pepole who have been declared infected"""
+        """ download the list with the sks (for the first infected day)
+             of those pepole who have been declared infected"""
         while True:
             #read from the health care database#
             with open('healthCareDataBase.txt', 'r') as file:
                 sk_infected_list = file.readlines()
-
                 #create ephIds#
                 for sk_and_time in sk_infected_list:
                     sk = sk_and_time.split(',')[0]
@@ -134,10 +134,8 @@ class App:
                         for infected_ephid in infected_ephids:
                             # check if there is a match
                             if infected_ephid in self.unique_id:
-                                print(
-                                    "Warning. You have been in contact with a carrier of COVID-19.")
-                                print(
-                                    "Please isolate yourself and check if you are a carrier")
+                                print("Warning. You have been in contact with a carrier of COVID-19.")
+                                print("Please isolate yourself and check if you are a carrier")
                                 # communicate with the simutation framework
                                 urllib.request.urlopen(
                                     f'http://localhost:8008/warning?name={self.name}')
