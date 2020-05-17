@@ -10,6 +10,8 @@ import time as real_time
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import asyncio
+from sys import platform
 from doctor import Doctor
 from device import Device, State
 
@@ -389,6 +391,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # For thread safety, this message must be sent on the event loop thread
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
         WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+if platform == 'win32':
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsSelectorEventLoopPolicy())  # python-3.8.0a4
 
 wwwroot_path = sys.argv[1]
 server = Server(wwwroot_path=wwwroot_path)
