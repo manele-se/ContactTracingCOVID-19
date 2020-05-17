@@ -29,6 +29,7 @@ WWW_PORT = 8008
 # Maximum number of seconds without a Bluetooth broadcast
 ZOMBIE_MAX_AGE = 5
 
+
 class Server:
     """Acts as intermediary for UDP packets, simulating Bluetooth LE between devices that are close
        enough to each other."""
@@ -43,34 +44,35 @@ class Server:
         self.devices_by_name = dict()
 
         # Start a thread to clean up zombie devices
-        self.zombie_thread = threading.Thread(name='zombies', target=self.zombie_thread_function, daemon=True)
+        self.zombie_thread = threading.Thread(
+            name='zombies', target=self.zombie_thread_function, daemon=True)
         self.zombie_thread.start()
 
         # Start the UDP server thread for simulating bluetooth
-        self.bluetooth_thread = threading.Thread(name='bluetooth', target=self.bluetooth_thread_function, daemon=True)
+        self.bluetooth_thread = threading.Thread(
+            name='bluetooth', target=self.bluetooth_thread_function, daemon=True)
         self.bluetooth_thread.start()
-        
-         #create a doctor
+
+        # create a doctor
         self.doctor = Doctor(self)
-        
+
         # Start the web server, hosting the Google Maps frontend
         WebSocketHandler.server = self
         MoveRequestHandler.server = self
-        WarningRequestHandler.server=self
+        WarningRequestHandler.server = self
         self.web_socket_handlers = set()
         tornado_app = tornado.web.Application([
             (r'/ws', WebSocketHandler),
             (r'/move', MoveRequestHandler),
             (r'/warning', WarningRequestHandler),
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': self.wwwroot_path, 'default_filename': 'index.html'})
-            
+            (r'/(.*)', tornado.web.StaticFileHandler,
+             {'path': self.wwwroot_path, 'default_filename': 'index.html'})
+
         ])
 
         tornado_app.listen(WWW_PORT)
         self.ioloop = tornado.ioloop.IOLoop.instance()
         self.ioloop.start()
-        
-       
 
     def zombie_thread_function(self):
         """The thread cleaning up zombie devices"""
@@ -81,7 +83,8 @@ class Server:
             now = real_time.time()
             threshold = now - ZOMBIE_MAX_AGE
             # Get all zombies
-            zombies = list(filter(lambda d: d.last_action < threshold and not d.name.startswith('Mallory'), self.devices_by_name.values()))
+            zombies = list(filter(lambda d: d.last_action < threshold and not d.name.startswith(
+                'Mallory'), self.devices_by_name.values()))
             for zombie in zombies:
                 print(f'Deleting zombie {zombie.name}')
                 del self.devices_by_name[zombie.name]
@@ -108,7 +111,7 @@ class Server:
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
 
         message_json = datagram.decode('utf-8')
-        
+
         try:
             message_object = json.loads(message_json)
         except json.decoder.JSONDecodeError:
@@ -130,7 +133,8 @@ class Server:
 
             # Send broadcast to WebSocket clients
             for ws_handler in self.web_socket_handlers:
-                ws_handler.send_device_broadcast(sender.name, sender.lat, sender.lng)
+                ws_handler.send_device_broadcast(
+                    sender.name, sender.lat, sender.lng)
 
             # Use a random threshold to sort of simulate real-world conditions
             threshold = random.uniform(MIN_DISTANCE, MAX_DISTANCE)
@@ -152,24 +156,25 @@ class Server:
                     })
                     # Send receive event to WebSocket clients
                     for ws_handler in self.web_socket_handlers:
-                        ws_handler.send_device_received(receiver.name, receiver.lat, receiver.lng)
-                        
-    def show_location_trails(self,location):
-        #sort list by timestamp
-        location_sorted = sorted(location, key= lambda item: item[2] )
-        #Send receive event to WebSocket clients
-   
+                        ws_handler.send_device_received(
+                            receiver.name, receiver.lat, receiver.lng)
+
+    def show_location_trails(self, location):
+        # sort list by timestamp
+        location_sorted = sorted(location, key=lambda item: item[2])
+        # Send receive event to WebSocket clients
+
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_location_trail(location_sorted)
 
     def send_info_to_client(self, name, info):
-        info_str = json.dumps(info) 
-        #convert i byte with encoding
+        info_str = json.dumps(info)
+        # convert i byte with encoding
         info_bytes = info_str.encode('utf-8')
-        #pick the address of a device
+        # pick the address of a device
         addr = self.devices_by_name[name].addr
         self.sock.sendto(info_bytes, addr)
-        
+
     def get_or_create_device(self, sender_addr, sender_name):
         """If the sender's address is known, return the device for that address, otherwise add a new device"""
 
@@ -201,11 +206,11 @@ class Server:
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
                     ws_handler.send_device_in_hospital(name)
-            elif device.state== State.INFECTED:
-                device.state=State.HEALTHY
+            elif device.state == State.INFECTED:
+                device.state = State.HEALTHY
                 # Send changes to WebSocket clients
                 for ws_handler in self.web_socket_handlers:
-                    ws_handler.send_device_healthy(name)        
+                    ws_handler.send_device_healthy(name)
 
     def stop_moving_device(self, name):
         """The device was grabbed. The person decided to stop moving."""
@@ -225,20 +230,20 @@ class Server:
         # Send movement to WebSocket clients
         for ws_handler in self.web_socket_handlers:
             ws_handler.send_device_moved(name, lat, lng, bearing)
-            
-         #send position to fake-gps
+
+         # send position to fake-gps
         self.send_info_to_client(name, {
-                    'data_type': 'location',
-                    'lat': lat,
-                    'lng': lng
-                })
-    
+            'data_type': 'location',
+            'lat': lat,
+            'lng': lng
+        })
+
     def send_action_to_client(self, action, data):
         """send a message to client"""
 
     def tick(self, seconds_passed):
         pass
-        
+
 
 class MoveRequestHandler(tornado.web.RequestHandler):
     """Http handler for move commands performed in the web user interface"""
@@ -255,22 +260,22 @@ class MoveRequestHandler(tornado.web.RequestHandler):
         elif action == 'toggle':
             device.still = not device.still
 
+
 class WarningRequestHandler(tornado.web.RequestHandler):
     """Http handler for warning commands sent from the client"""
     server = None
 
     def get(self):
         device_name = self.get_argument('name')
-        #if infected do not send to the client to change
+        # if infected do not send to the client to change
         device = WarningRequestHandler.server.devices_by_name[device_name]
         if device.state == State.INFECTED:
             return
-     
+
         # Send changes to WebSocket clients
         for ws_handler in WarningRequestHandler.server.web_socket_handlers:
             ws_handler.send_warning_to_device(device_name)
-        
-    
+
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     """WebSocket connection handler for real-time updates in the web user interface"""
@@ -325,7 +330,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'name': name
         })
         self.send_json(json_data)
-    
+
     def send_device_in_hospital(self, name):
         """Send information to the browser about a device changing color"""
         json_data = json.dumps({
@@ -333,7 +338,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'name': name
         })
         self.send_json(json_data)
-        
+
     def send_warning_to_device(self, name):
         """Send information to the client about a device changing color"""
         json_data = json.dumps({
@@ -349,7 +354,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'name': name
         })
         self.send_json(json_data)
-    
+
     def send_device_malicious(self, name):
         """Send information to the client about a device changing color"""
         json_data = json.dumps({
@@ -357,7 +362,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'name': name
         })
         self.send_json(json_data)
-        
+
     def send_device_broadcast(self, name, lat, lng):
         """Send information to the client about a device broadcast"""
         json_data = json.dumps({
@@ -377,20 +382,23 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             'lng': lng
         })
         self.send_json(json_data)
-    
+
     def send_location_trail(self, trail):
         """Send information to the client about a location trail"""
         json_data = json.dumps({
             'action': 'location_trail',
             'trail': trail
         })
-        
+
         self.send_json(json_data)
-    
+
     def send_json(self, json_data):
         # For thread safety, this message must be sent on the event loop thread
         # https://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop.add_callback
-        WebSocketHandler.server.ioloop.add_callback(self.write_message, json_data)
+        WebSocketHandler.server.ioloop.add_callback(
+            self.write_message, json_data)
+
+
 if platform == 'win32':
     asyncio.set_event_loop_policy(
         asyncio.WindowsSelectorEventLoopPolicy())  # python-3.8.0a4
