@@ -10,7 +10,7 @@ export PYTHONPATH=./:./server/src/
 tmux new-session -d 'python3 server/src/server.py server/src/wwwroot'
 
 export PYTHONPATH=./:./client/src/
-tmux split-window -h -l 75% 'python3 client/src/client.py 40'
+tmux split-window -h -l 75% 'python3 client/src/app.py 40'
 tmux split-window -v -l 50% 'python3 client/src/malloryCollector.py 10'
 open 'http://localhost:8008'
 tmux -2 attach-session -d

@@ -9,8 +9,8 @@ touch healthCareDataBase.txt
 export PYTHONPATH=./:./server/src/
 tmux new-session -d 'python3 server/src/server.py server/src/wwwroot'
 
-export PYTHONPATH=./:./client/src/
-tmux split-window -h -l 75% 'python3 client/src/client.py 40'
+export PYTHONPATH=./:./apps/src/
+tmux split-window -h -l 75% 'python3 apps/src/app.py 40'
 
 open 'http://localhost:8008'
 tmux -2 attach-session -d

@@ -35,7 +35,6 @@ class Device:
     """Representation of a virtual Bluetooth-simulating device,
        with a lat/lng position in a virtual world, that moves
        around randomly, and that can be told to move to a place."""
-    next_id = 1
 
     def __init__(self, addr, name):
         """Constructor for the Device class"""
@@ -61,9 +60,6 @@ class Device:
 
         # Start with movement
         self.still = False
-
-        # Increment the ID for the next device
-        Device.next_id += 1
 
     def thread_function(self):
         """Thread for moving the device around"""
