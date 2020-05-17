@@ -1,4 +1,4 @@
-# Start a server and four clients
+# Start a server, 40 normal users and 20 malicious collectors
 # Requires tmux
 # Install tmux on Mac:
 # brew install tmux
@@ -11,6 +11,6 @@ tmux new-session -d 'python3 server/src/server.py server/src/wwwroot'
 
 export PYTHONPATH=./:./client/src/
 tmux split-window -h -l 75% 'python3 client/src/app.py 40'
-tmux split-window -v -l 50% 'python3 client/src/malloryCollector.py 10'
+tmux split-window -v -l 50% 'python3 client/src/malloryCollector.py 20'
 open 'http://localhost:8008'
 tmux -2 attach-session -d
