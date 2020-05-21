@@ -147,9 +147,9 @@ class App:
             time.task_sleep(4 * 60 * 60)
 
     def upload_key_and_time(self, time):
-        """it takes the first day of being contagious and it create its Sk for that day and 
+        """it takes the first day of being contagious and
+         it creates its Sk for that day and 
            and uploads its Sk and timestamp"""
-        print('uploading')
         sk = self.key0
         for k in range(self.key0_time, time):
             sk = self.get_next_key(sk)
