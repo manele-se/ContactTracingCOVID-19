@@ -109,7 +109,7 @@ class MalloryBoss:
                         for infected_ephid in infected_ephids:
                             #check if there is a match 
                             if infected_ephid in stolen_pos:
-                                #loop over tuppels
+                                #loop over tuples
                                 for (lat, lng, timestamp) in stolen_pos[infected_ephid]:
                                    location_trail.append((round(lat, 6), round(lng, 6), int(timestamp)))
                     #check if list is not empty, meaning that there is a match 
