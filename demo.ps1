@@ -1,35 +1,29 @@
-# Start a server and four clients
-
-# Requires PowerShell
+# Start a server and four clients, in PowerShell
 
 # Requires python3.7 or later, and python modules pycrypto and tornado
 # Install: pip install pycrypto tornado
-# Installing pycrypto might require you to also install Microsoft Visual C++ Build Tools v14.0
+
+# Installing pycrypto might require you to:
+#  - First install Microsoft Visual C++ Build Tools v14.0 (VS2015)
+#  - Start a Developer Command Prompt for VS2015
+#  - Install pycrypto using these steps:
+#      set CL=-FI"C:\Program Files (x86)\Microsoft Visual Studo 14.0\VC\include\stdint.h"
+#      pip install pycrypto
 
 # To start this script, first set the execution policy to Bypass
 # Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass
 
-# Start the simulation server
+$env:PYTHONPATH = ".\;.\server\src\;.\apps\src\"
 
-$env:PYTHONPATH = ".\;.\server\src\"
-$serversession = New-PSSession
-Invoke-Command -Session $serversession -Scriptblock {python .\server\src\server.py .\server\src\wwwroot\}
+# Start the simulation server
+Start-Process python -ArgumentList ".\server\src\server.py", ".\server\src\wwwroot\"
 
 # Start four clients, Alice, Bob, Carol and Dave
-
-$env:PYTHONPATH = ".\;.\apps\src\"
-$alicesession = New-PSSession
-Invoke-Command -Session $alicesession -Scriptblock {python .\apps\src\app.py Alice}
-
-$bobsession = New-PSSession
-Invoke-Command -Session $bobsession -Scriptblock {python .\apps\src\app.py Bob}
-
-$carolsession = New-PSSession
-Invoke-Command -Session $carolsession -Scriptblock {python .\apps\src\app.py Carol}
-
-$davesession = New-PSSession
-Invoke-Command -Session $davesession -Scriptblock {python .\apps\src\app.py Dave}
+Start-Process python -ArgumentList ".\apps\src\app.py", "Alice"
+Start-Process python -ArgumentList ".\apps\src\app.py", "Bob"
+Start-Process python -ArgumentList ".\apps\src\app.py", "Carol"
+Start-Process python -ArgumentList ".\apps\src\app.py", "Dave"
 
 # Open the observation interface in the default web browser
 
-Start 'http://localhost:8008/'
+Start-Process 'http://localhost:8008/'

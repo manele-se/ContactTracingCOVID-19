@@ -33,8 +33,11 @@ class UdpClient:
         # Loop forever
         while True:
             # Wait for an incoming UDP datagram
-            data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
-            self.receive_data(data)
+            try:
+                data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
+                self.receive_data(data)
+            except:
+                pass
 
     def send(self, data):
         """Sends one UDP datagram to the simulation server"""

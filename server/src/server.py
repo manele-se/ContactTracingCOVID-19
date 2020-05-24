@@ -104,8 +104,11 @@ class Server:
         # Loop forever
         while True:
             # Wait for one UDP datagram to arrive
-            data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
-            self.handle_incoming_broadcast(self.sock, data, addr)
+            try:
+                data, addr = self.sock.recvfrom(UDP_PACKET_SIZE)
+                self.handle_incoming_broadcast(self.sock, data, addr)
+            except:
+                pass
 
     def handle_incoming_broadcast(self, sock, datagram, sender_addr):
         """When an incoming BLE broadcast arrives, relay it to all other devices that are close enough"""
