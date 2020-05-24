@@ -63,7 +63,7 @@ function getOrCreateDeviceMarker(name) {
       };
       ws.send(JSON.stringify(message));
     });
-    newDevice.addListener('dragstart', evt => {
+    newDevice.addListener('dragstart', (evt) => {
       newDevice.dragging = true;
       const message = {
         action: 'stop',
@@ -71,7 +71,7 @@ function getOrCreateDeviceMarker(name) {
       };
       ws.send(JSON.stringify(message));
     });
-    newDevice.addListener('dragend', evt => {
+    newDevice.addListener('dragend', (evt) => {
       const newLat = evt.latLng.lat();
       const newLng = evt.latLng.lng();
       newDevice.dragging = false;
@@ -123,18 +123,18 @@ function connectToWebSocket() {
   ws = new WebSocket(wsAddress);
 
   // Connection was established.
-  ws.onopen = evt => {
+  ws.onopen = (evt) => {
     console.log('WebSocket connection established.');
   };
 
   // Connection was closed or broken. Retry connection after a second.
-  ws.onclose = evt => {
+  ws.onclose = (evt) => {
     console.warn('Closed WebSocket connection. Retrying...');
     window.setTimeout(() => connectToWebSocket(), 1000);
   };
 
   // Incoming message from the server
-  ws.onmessage = evt => {
+  ws.onmessage = (evt) => {
     // Parse the message
     const { name, lat, lng, bearing, action, trail } = JSON.parse(evt.data);
 
@@ -161,11 +161,11 @@ function connectToWebSocket() {
 
       case 'location_trail':
         //show the trail of infected
-        let coordinates = trail.map(([ lat, lng ]) => ({
+        const coordinates = trail.map(([ lat, lng ]) => ({
           lat: lat,
           lng: lng
         }));
-        let polyline = new google.maps.Polyline({
+        const polyline = new google.maps.Polyline({
           path: coordinates,
           strokeColor: 'red',
           strokeWeight: 10
