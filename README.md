@@ -1,4 +1,7 @@
-# ContactTracingCOVID-19
+# Contact Tracing Application for COVID-19
+
+This is a project aiming at simulating the DP-3T protocol, as in the description in the Whitepaper. The focus of the project is
+privacy protection.
 
 ## Instructions to run the simulation
 
@@ -79,3 +82,7 @@ To run the attack in Windows, type:
 ```
 
 In this case 20 malicious devices are created together with 40 normal users. 
+
+## Simulation video
+
+For a demonstration of this project, please see https://vimeo.com/elenamarzi/dp3t-simulation
