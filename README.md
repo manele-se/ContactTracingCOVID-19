@@ -1,7 +1,10 @@
 # Contact Tracing Application for COVID-19
 
-This is a project aiming at simulating the DP-3T protocol, as in the description in the Whitepaper. The focus of the project is
+This is a project aiming at simulating the DP-3T protocol,  https://github.com/DP-3T/documents/blob/master/DP3T%20White%20Paper.pdf, with focus on
 privacy protection.
+
+## Disclamer
+This project has been completed on the 24th of May. Every changes in the protocol happened after that date are not taken into consideration. 
 
 ## Instructions to run the simulation
 
